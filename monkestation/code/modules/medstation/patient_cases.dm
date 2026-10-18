@@ -15,6 +15,8 @@
 	var/weight = 10
 	/// Needs at least this many medical staff on the station to be picked
 	var/min_staff = 0
+	/// Hospital level needed before this case turns up. 0 = by difficulty (critical cases need a better hospital).
+	var/min_level = 0
 	/// Lines the patient says out loud while they wait
 	var/list/symptoms = list("Ow...")
 	/// Lines for the intake chart
@@ -23,6 +25,10 @@
 	var/infectious = FALSE
 	/// Ways this patient can turn up: by ambulance (on a stretcher) and/or walking into the waiting room
 	var/list/arrival_modes = list(PATIENT_ARRIVE_AMBULANCE, PATIENT_ARRIVE_WALKIN)
+
+/// Hospital level (see patient_director.dm) needed for this case to turn up.
+/datum/patient_case/proc/get_min_level()
+	return min_level || (difficulty >= 3 ? 2 : 1)
 
 /// Inflicts the ailment on a freshly created patient.
 /datum/patient_case/proc/apply(mob/living/carbon/human/patient)
@@ -167,6 +173,7 @@
 	return !patient.reagents.has_reagent(/datum/reagent/toxin/formaldehyde)
 
 /datum/patient_case/liver_failure
+	min_level = 3
 	name = "Yellowing skin, confusion"
 	diagnosis = "Acute liver failure"
 	difficulty = 3
@@ -224,6 +231,7 @@
 	return !length(patient.diseases) && patient.getToxLoss() <= 15
 
 /datum/patient_case/parasite
+	min_level = 3
 	name = "Weight loss, abdominal pain"
 	diagnosis = "Parasitic liver infection (needs the liver removed and replaced)"
 	difficulty = 3
@@ -241,3 +249,116 @@
 
 /datum/patient_case/parasite/is_resolved(mob/living/carbon/human/patient)
 	return !length(patient.diseases) && !!patient.get_organ_slot(ORGAN_SLOT_LIVER) && patient.getToxLoss() <= 15
+
+// ------------------------------------------------------------------ surgical cases
+
+/datum/patient_case/appendicitis
+	name = "Severe abdominal pain"
+	diagnosis = "Appendicitis (the appendix has to come out)"
+	difficulty = 2
+	weight = 9
+	symptoms = list("It hurts right here, low on the right...", "I feel sick and I think I have a fever.", "*groans* My stomach...")
+	history = list("Pain that started around the navel and moved to the lower right abdomen.", "Nausea, low fever, will not eat.")
+
+/datum/patient_case/appendicitis/apply(mob/living/carbon/human/patient)
+	var/obj/item/organ/internal/appendix/appendix = patient.get_organ_slot(ORGAN_SLOT_APPENDIX)
+	if(!appendix)
+		appendix = new()
+		appendix.Insert(patient, special = TRUE)
+	appendix.inflamation_stage = 2
+	appendix.update_appearance()
+	patient.adjustOrganLoss(ORGAN_SLOT_APPENDIX, 20)
+
+/datum/patient_case/appendicitis/worsen(mob/living/carbon/human/patient)
+	patient.adjustToxLoss(3)
+	var/obj/item/organ/internal/appendix/appendix = patient.get_organ_slot(ORGAN_SLOT_APPENDIX)
+	if(appendix)
+		appendix.inflamation_stage = 3
+		patient.adjustOrganLoss(ORGAN_SLOT_APPENDIX, 8)
+
+/datum/patient_case/appendicitis/is_resolved(mob/living/carbon/human/patient)
+	var/obj/item/organ/internal/appendix/appendix = patient.get_organ_slot(ORGAN_SLOT_APPENDIX)
+	return (!appendix || !appendix.inflamation_stage) && is_generally_stable(patient, tox_max = 30)
+
+/datum/patient_case/shrapnel
+	name = "Debris injury to the chest"
+	diagnosis = "Glass shard lodged in the chest cavity (cavity surgery to remove it)"
+	difficulty = 2
+	weight = 7
+	arrival_modes = list(PATIENT_ARRIVE_AMBULANCE)
+	symptoms = list("Something's inside me, I can feel it moving.", "It hurts when I breathe.", "A window blew out right next to me.")
+	history = list("Caught next to a window failure.", "Entry wound on the chest, foreign body suspected.")
+
+/datum/patient_case/shrapnel/apply(mob/living/carbon/human/patient)
+	var/obj/item/bodypart/chest/chest = patient.get_bodypart(BODY_ZONE_CHEST)
+	if(!chest)
+		return
+	chest.cavity_item = new /obj/item/shard(patient)
+	chest.receive_damage(brute = rand(15, 25), wound_bonus = CANT_WOUND)
+	patient.cause_wound_of_type_and_severity(WOUND_PIERCE, chest, WOUND_SEVERITY_MODERATE, WOUND_SEVERITY_SEVERE)
+
+/datum/patient_case/shrapnel/worsen(mob/living/carbon/human/patient)
+	patient.adjustBruteLoss(3)
+
+/datum/patient_case/shrapnel/is_resolved(mob/living/carbon/human/patient)
+	var/obj/item/bodypart/chest/chest = patient.get_bodypart(BODY_ZONE_CHEST)
+	return !chest?.cavity_item && is_generally_stable(patient)
+
+/datum/patient_case/heart_attack
+	min_level = 3
+	name = "Crushing chest pain"
+	diagnosis = "Cardiac arrest"
+	difficulty = 3
+	min_staff = 2
+	weight = 5
+	arrival_modes = list(PATIENT_ARRIVE_AMBULANCE)
+	symptoms = list("*gasps* My chest...", "Left arm... numb...", "Tell my family...")
+	history = list("Collapsed at the gym. Bystanders did CPR for a few minutes.", "Unresponsive on arrival, no pulse.")
+
+/datum/patient_case/heart_attack/apply(mob/living/carbon/human/patient)
+	patient.set_heartattack(TRUE)
+	patient.Unconscious(3 MINUTES)
+
+/datum/patient_case/heart_attack/worsen(mob/living/carbon/human/patient)
+	patient.adjustOxyLoss(8)
+
+/datum/patient_case/heart_attack/is_resolved(mob/living/carbon/human/patient)
+	return !patient.undergoing_cardiac_arrest() && is_generally_stable(patient)
+
+/datum/patient_case/head_injury
+	name = "Head trauma"
+	diagnosis = "Traumatic brain injury"
+	difficulty = 3
+	min_staff = 2
+	weight = 5
+	arrival_modes = list(PATIENT_ARRIVE_AMBULANCE)
+	symptoms = list("Where... where am I?", "*mumbles*", "My head is splitting.")
+	history = list("Struck on the head by a falling crate.", "Brief loss of consciousness, now confused and drowsy.")
+
+/datum/patient_case/head_injury/apply(mob/living/carbon/human/patient)
+	patient.adjustOrganLoss(ORGAN_SLOT_BRAIN, 55)
+	patient.Unconscious(2 MINUTES)
+
+/datum/patient_case/head_injury/worsen(mob/living/carbon/human/patient)
+	patient.adjustOrganLoss(ORGAN_SLOT_BRAIN, 6)
+
+/datum/patient_case/head_injury/is_resolved(mob/living/carbon/human/patient)
+	return patient.get_organ_loss(ORGAN_SLOT_BRAIN) <= 20 && is_generally_stable(patient)
+
+/datum/patient_case/eye_injury
+	name = "Eye injury"
+	diagnosis = "Chemical damage to the eyes"
+	difficulty = 1
+	weight = 8
+	arrival_modes = list(PATIENT_ARRIVE_WALKIN)
+	symptoms = list("My eyes! They're burning!", "I can barely see.", "Something splashed in my face at work.")
+	history = list("Splashed with a cleaning agent.", "Severe redness and watering in both eyes.")
+
+/datum/patient_case/eye_injury/apply(mob/living/carbon/human/patient)
+	patient.adjustOrganLoss(ORGAN_SLOT_EYES, 40)
+
+/datum/patient_case/eye_injury/worsen(mob/living/carbon/human/patient)
+	patient.adjustOrganLoss(ORGAN_SLOT_EYES, 4)
+
+/datum/patient_case/eye_injury/is_resolved(mob/living/carbon/human/patient)
+	return patient.get_organ_loss(ORGAN_SLOT_EYES) <= 10

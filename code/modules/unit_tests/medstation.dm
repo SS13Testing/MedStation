@@ -50,6 +50,23 @@
 	TEST_ASSERT(walkin.patience_until > world.time, "walk-in should have a patience timer")
 	director.active -= walkin
 
+	// triage: tagging works, the colour is recorded, and the right colour earns a bonus on discharge
+	var/datum/patient_record/tagged = director.spawn_patient(/datum/patient_case/burns, run_loc_floor_bottom_left, 1)
+	var/mob/living/carbon/human/tagged_patient = tagged.patient_ref.resolve()
+	var/mob/living/carbon/human/medic = allocate(/mob/living/carbon/human/consistent)
+	var/obj/item/triage_tagger/tagger = allocate(/obj/item/triage_tagger)
+	TEST_ASSERT_EQUAL(tagger.level, TRIAGE_GREEN, "tagger should start on green")
+	tagger.interact_with_atom(tagged_patient, medic)
+	TEST_ASSERT_EQUAL(tagged.tag_level, TRIAGE_GREEN, "the record should remember the tag colour")
+	TEST_ASSERT_NOTNULL(tagged_patient.GetComponent(/datum/component/triage_tag), "patient should carry a triage tag")
+	tagger.attack_self(medic)
+	TEST_ASSERT_EQUAL(tagger.level, TRIAGE_YELLOW, "attack_self should cycle the colour")
+	var/reputation_before = director.reputation
+	tagged.discharge_at = world.time
+	// burns are difficulty 1 = green, so the green tag was right
+	tagged.process_record(director)
+	TEST_ASSERT(director.reputation >= reputation_before + 1 + tagged.case.difficulty, "correct triage should add a reputation bonus")
+
 	// a death
 	var/datum/patient_record/doomed = director.spawn_patient(/datum/patient_case/burns, run_loc_floor_bottom_left, 1)
 	TEST_ASSERT_NOTNULL(doomed, "second spawn_patient returned no record")
@@ -81,22 +98,111 @@
 		TEST_ASSERT(director.pick_case(5, PATIENT_ARRIVE_WALKIN) != /datum/patient_case/chest_wound, "chest wound picked as a walk-in")
 		TEST_ASSERT(director.pick_case(5, PATIENT_ARRIVE_AMBULANCE) != /datum/patient_case/flu, "flu picked as an ambulance patient")
 
+/// Reputation moves the hospital between levels, levels gate cases and change payouts, and the report renders.
+/datum/unit_test/medstation_levels
+
+/datum/unit_test/medstation_levels/Run()
+	var/datum/controller/subsystem/patient_director/director = SSpatient_director
+	var/old_level = director.level
+	var/old_reputation = director.reputation
+	var/old_stats = director.case_stats
+	director.case_stats = list()
+
+	director.reputation = -50
+	director.update_level()
+	TEST_ASSERT_EQUAL(director.level_name(), "Failing clinic", "very low reputation should be a failing clinic")
+	TEST_ASSERT(director.payout_multiplier() < 1, "a failing clinic should be paid less")
+	director.reputation = 0
+	director.update_level()
+	TEST_ASSERT_EQUAL(director.level_name(), "Local clinic", "reputation 0 should be a local clinic")
+	director.reputation = 250
+	director.update_level()
+	TEST_ASSERT_EQUAL(director.level_name(), "Centre of excellence", "reputation 250 should be a centre of excellence")
+	TEST_ASSERT(director.max_patients(1) > 4, "a better hospital should hold more patients")
+
+	// level gating: a local clinic never gets the rare critical cases, a top hospital can
+	director.reputation = 0
+	director.update_level()
+	for(var/i in 1 to 40)
+		var/picked = director.pick_case(6)
+		var/datum/patient_case/case = new picked()
+		TEST_ASSERT(case.get_min_level() <= director.level, "[picked] picked below its hospital level")
+	director.reputation = 250
+	director.update_level()
+	var/saw_rare = FALSE
+	for(var/i in 1 to 400)
+		if(director.pick_case(6) == /datum/patient_case/heart_attack)
+			saw_rare = TRUE
+	TEST_ASSERT(saw_rare, "a top hospital should eventually see heart attacks")
+
+	// stats and the report
+	director.record_stat(new /datum/patient_case/flu(), "treated")
+	director.record_stat(new /datum/patient_case/flu(), "died")
+	TEST_ASSERT_EQUAL(director.case_stats["Fever and cough"]["treated"], 1, "stat not recorded")
+	var/report = director.shift_report()
+	TEST_ASSERT(findtext(report, "Hospital shift report") && findtext(report, "Fever and cough"), "shift report is missing content")
+
+	director.case_stats = old_stats
+	director.reputation = old_reputation
+	director.level = old_level
+
+/// Every hospital event runs and brings patients (or an ambulance, or a rush).
+/datum/unit_test/medstation_events
+
+/datum/unit_test/medstation_events/Run()
+	var/datum/controller/subsystem/patient_director/director = SSpatient_director
+	TEST_ASSERT(length(director.event_weights), "no hospital events registered")
+	for(var/event_type in director.event_weights)
+		director.active.Cut()
+		var/datum/hospital_event/event = director.run_event(event_type, 3)
+		TEST_ASSERT_NOTNULL(event, "[event_type] did not run")
+	// rush hour shortens the gap between patients
+	director.rush_until = 0
+	var/normal_interval_max = 180 SECONDS
+	director.rush_until = world.time + 5 MINUTES
+	TEST_ASSERT(director.patient_interval(3) < normal_interval_max, "rush hour should shorten the patient interval")
+	director.rush_until = 0
+	// an ambulance may be left over from the mass casualty event: remove it
+	for(var/obj/structure/medstation_ambulance/ambulance in world)
+		qdel(ambulance)
+	director.active.Cut()
+
+/// Everything on the hospital terminal's order list must exist and be affordable-looking.
+/datum/unit_test/medstation_supplies
+
+/datum/unit_test/medstation_supplies/Run()
+	TEST_ASSERT(length(GLOB.hospital_supplies), "no hospital supplies defined")
+	for(var/supply_name in GLOB.hospital_supplies)
+		var/datum/hospital_supply/supply = GLOB.hospital_supplies[supply_name]
+		TEST_ASSERT(supply.cost > 0, "[supply_name] has no cost")
+		TEST_ASSERT(length(supply.contents_list), "[supply_name] has no contents")
+		var/obj/structure/closet/crate/crate = allocate(/obj/structure/closet/crate)
+		for(var/item_type in supply.contents_list)
+			TEST_ASSERT(ispath(item_type, /obj), "[supply_name] contains [item_type] which is not an object type")
+			TEST_ASSERT(supply.contents_list[item_type] >= 1, "[supply_name] has a zero count for [item_type]")
+			var/obj/made = new item_type(crate)
+			TEST_ASSERT(!QDELETED(made), "[item_type] from [supply_name] deleted itself on creation")
+
 /// The map must have what the hospital needs to run.
 /datum/unit_test/medstation_map
 
 /datum/unit_test/medstation_map/Run()
 	TEST_ASSERT(length(GLOB.patient_spawn_points), "map has no /obj/effect/landmark/patient_spawn")
 	TEST_ASSERT(length(GLOB.ambulance_park_points), "map has no /obj/effect/landmark/ambulance_park")
+	TEST_ASSERT(length(GLOB.supply_drop_points), "map has no /obj/effect/landmark/supply_drop")
 	TEST_ASSERT(length(GLOB.patient_walkin_points), "map has no /obj/effect/landmark/patient_walkin")
 	TEST_ASSERT(length(SSjob.latejoin_trackers), "map has no latejoin landmarks")
-	var/found_doctor_spawn = FALSE
-	for(var/obj/effect/landmark/start/start as anything in GLOB.start_landmarks_list)
-		if(start.name == JOB_MEDICAL_DOCTOR)
-			found_doctor_spawn = TRUE
-	TEST_ASSERT(found_doctor_spawn, "map has no medical doctor start landmark")
+	// Start landmarks delete themselves once the round has started (before the tests run), so read the map file.
+	var/map_text = file2text("_maps/map_files/debug/medstation.dmm")
+	TEST_ASSERT(length(map_text), "could not read medstation.dmm")
+	for(var/job_landmark in list("medical_doctor", "paramedic", "chemist", "virologist", "psychologist", "geneticist", "chief_medical_officer"))
+		TEST_ASSERT(findtext(map_text, "/obj/effect/landmark/start/[job_landmark]"), "map has no [job_landmark] start landmark")
 
 TEST_FOCUS(/datum/unit_test/patient_cases)
 TEST_FOCUS(/datum/unit_test/patient_director)
 TEST_FOCUS(/datum/unit_test/medstation_ambulance)
+TEST_FOCUS(/datum/unit_test/medstation_levels)
+TEST_FOCUS(/datum/unit_test/medstation_events)
+TEST_FOCUS(/datum/unit_test/medstation_supplies)
 TEST_FOCUS(/datum/unit_test/medstation_map)
 #endif

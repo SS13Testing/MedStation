@@ -1235,8 +1235,10 @@ SUBSYSTEM_DEF(ticker)
 /datum/controller/subsystem/ticker/proc/build_roundend_report()
 	var/list/parts = list()
 
-	//might want to make this a full section
-	parts += "<div class='panel stationborder'><span class='header'>[("Storyteller: [SSgamemode.current_storyteller ? SSgamemode.current_storyteller.name : "N/A"]")]</span></div>"
+	// MEDSTATION EDIT: no storyteller here, the hospital gets its own report instead
+	if(!CONFIG_GET(flag/disable_storyteller))
+		parts += "<div class='panel stationborder'><span class='header'>[("Storyteller: [SSgamemode.current_storyteller ? SSgamemode.current_storyteller.name : "N/A"]")]</span></div>"
+	parts += SSpatient_director.shift_report()
 
 	if(nanotrasen_rep_status)
 		parts += nanotrasen_rep_report()

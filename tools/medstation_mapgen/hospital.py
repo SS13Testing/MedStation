@@ -209,6 +209,9 @@ def furnish(g):
 	row(g, x1 + 1, x2 - 1, y2 - 1, rtable)           # reception desk
 	g.put(x1 + 1, y2, "/obj/machinery/computer/records/medical")
 	g.put(x1 + 4, y2, "/obj/machinery/computer/crew")
+	g.put(x1 + 6, y2, "/obj/machinery/computer/hospital_terminal")
+	g.put(x1 + 2, y2 - 1, "/obj/item/triage_tagger")
+	g.put(x1 + 5, y2 - 1, "/obj/item/triage_tagger")
 	g.put(x1 + 3, y2 - 2, atom("/obj/structure/chair/office", dir=1))
 	g.put(x2, y1 + 1, "/obj/machinery/fax")
 	g.put(x1, y1 + 1, "/obj/machinery/vending/wallmed")
@@ -322,6 +325,7 @@ def furnish(g):
 	g.put(36, 36, "/obj/effect/landmark/ambulance_park")
 	for y in (35, 36, 37):
 		g.put(34, y, "/obj/effect/landmark/patient_spawn")
+	g.put(x2 - 2, y1 + 6, "/obj/effect/landmark/supply_drop")
 	g.put(x2, y1, "/obj/structure/closet/emcloset")
 	g.put(x2, y1 + 2, "/obj/structure/closet/firecloset")
 	g.put(x1, y2, "/obj/machinery/vending/wallmed")
@@ -341,6 +345,7 @@ def furnish(g):
 		g.put(x1 + 2 + i * 3, y1 + 5, "/obj/effect/landmark/latejoin")
 	for i in range(2):
 		g.put(x1 + 5 + i * 4, y1 + 7, "/obj/effect/landmark/start")
+	g.put(x1 + 8, y2, "/obj/machinery/computer/hospital_terminal")
 	g.put(x1 + 1, y2, "/obj/machinery/coffeemaker")
 	g.put(x1 + 3, y2, "/obj/machinery/microwave")
 	g.put(x2, y2, "/obj/machinery/vending/coffee")
