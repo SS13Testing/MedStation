@@ -24,6 +24,9 @@ GLOBAL_LIST_INIT(hospital_levels, list(
 #define EVENT_FIRST_DELAY (12 MINUTES)
 #define EVENT_MIN_GAP (10 MINUTES)
 #define EVENT_MAX_GAP (20 MINUTES)
+/// Chance that a patient is allergic to a medicine, and that the chart says so when they are
+#define ALLERGY_CHANCE 30
+#define ALLERGY_KNOWN_CHANCE 85
 /// Credits for tagging a patient with the right triage colour
 #define TRIAGE_BONUS 50
 /// Credits the medical budget starts the round with
@@ -65,6 +68,8 @@ SUBSYSTEM_DEF(patient_director)
 	var/deceased = 0
 	/// Walk-ins that gave up waiting and left
 	var/walked_out = 0
+	/// Patients that reacted badly to a medicine they were allergic to
+	var/allergic_reactions = 0
 	/// Hospital reputation. Goes up for cured patients, down (faster) for deaths.
 	var/reputation = 0
 	/// Weighted list of case types
@@ -356,6 +361,7 @@ SUBSYSTEM_DEF(patient_director)
 	var/list/parts = list("<div class='panel stationborder'><span class='header'>Hospital shift report</span><br>")
 	parts += "Final rating: <b>[level_name()]</b> (reputation [reputation])<br>"
 	parts += "Patients treated: <b>[treated]</b> | lost: <b>[deceased]</b> | left without being seen: <b>[walked_out]</b><br>"
+	parts += "Allergic reactions to treatment: <b>[allergic_reactions]</b><br>"
 	parts += "Medical budget at close: <b>[SSeconomy.get_dep_account(ACCOUNT_MED)?.account_balance || 0]</b> credits<br>"
 	if(length(case_stats))
 		parts += "<br><table><tr><th>Case</th><th>Treated</th><th>Died</th><th>Left</th></tr>"
@@ -380,7 +386,7 @@ SUBSYSTEM_DEF(patient_director)
 	var/list/lines = list("<b>Hospital status</b>")
 	lines += "Rating: [level_name()] (reputation [reputation])"
 	lines += "Patients in the hospital: [length(active)]"
-	lines += "Treated: [treated] | Lost: [deceased] | Left unseen: [walked_out] | Reputation: [reputation]"
+	lines += "Treated: [treated] | Lost: [deceased] | Left unseen: [walked_out] | Allergic reactions: [allergic_reactions] | Reputation: [reputation]"
 	lines += "Medical budget: [SSeconomy.get_dep_account(ACCOUNT_MED)?.account_balance || 0] credits"
 	for(var/datum/patient_record/record as anything in active)
 		lines += "- [record.patient_name] ([record.arrival_mode]): [record.triage_label()][isnull(record.tag_level) ? "" : " | tagged [triage_level_name(record.tag_level)]"]"
@@ -403,6 +409,12 @@ SUBSYSTEM_DEF(patient_director)
 	var/patience_until
 	/// Walk-ins: when they appeared (for the seat timeout)
 	var/arrived_at
+	/// A medicine this patient is allergic to (reagent type), or null. Giving it triggers anaphylaxis.
+	var/datum/reagent/allergy
+	/// Does the intake chart say so? Usually, but not always.
+	var/allergy_known = FALSE
+	/// Has the reaction happened already?
+	var/reacted = FALSE
 	/// TRIAGE_* colour a member of staff tied to the patient, if any
 	var/tag_level
 	/// Walk-ins: has a member of staff taken them out of the waiting room yet?
@@ -415,6 +427,14 @@ SUBSYSTEM_DEF(patient_director)
 	patient_name = patient.real_name
 	arrived_at = world.time
 	deadline = world.time + case.get_deadline()
+	if(prob(ALLERGY_CHANCE))
+		var/static/list/possible_allergies = list(
+			/datum/reagent/medicine/c2/libital, /datum/reagent/medicine/c2/lenturi, /datum/reagent/medicine/c2/aiuri,
+			/datum/reagent/medicine/c2/multiver, /datum/reagent/medicine/c2/convermol, /datum/reagent/medicine/salbutamol,
+			/datum/reagent/medicine/mannitol, /datum/reagent/medicine/oculine,
+		)
+		allergy = pick(possible_allergies)
+		allergy_known = prob(ALLERGY_KNOWN_CHANCE)
 
 /datum/patient_record/proc/triage_label()
 	switch(case.difficulty)
@@ -432,6 +452,7 @@ SUBSYSTEM_DEF(patient_director)
 		"Triage level: [triage_label()]", "<br><b>Notes from the crew:</b>")
 	for(var/line in case.history)
 		lines += "- [line]"
+	lines += "<br>Known allergies: [allergy && allergy_known ? "<b>[initial(allergy.name)]</b>" : "none reported"]"
 	lines += "<br><i>No diagnosis recorded. Scan the patient.</i>"
 	chart.add_raw_text(lines.Join("<br>"))
 	chart.update_appearance()
@@ -451,7 +472,9 @@ SUBSYSTEM_DEF(patient_director)
 		return
 	if(arrival_mode == PATIENT_ARRIVE_WALKIN && !admitted && !process_walkin(patient, director))
 		return
-	if(case.is_resolved(patient))
+	if(allergy && !reacted && patient.reagents?.has_reagent(allergy))
+		react(patient, SSpatient_director)
+	if(case.is_resolved(patient) && !(locate(/datum/disease/anaphylaxis) in patient.diseases))
 		discharge_at = world.time + PATIENT_DISCHARGE_DELAY
 		patient.SetUnconscious(0)
 		to_chat(patient, span_notice("You feel much better."))
@@ -462,6 +485,17 @@ SUBSYSTEM_DEF(patient_director)
 		patient.updatehealth()
 	if(patient.stat == CONSCIOUS && prob(25))
 		patient.say(pick(case.symptoms))
+
+/// The patient was given something they are allergic to.
+/datum/patient_record/proc/react(mob/living/carbon/human/patient, datum/controller/subsystem/patient_director/director)
+	reacted = TRUE
+	director.allergic_reactions++
+	director.reputation--
+	patient.visible_message(span_danger("[patient] breaks out in hives and starts wheezing!"))
+	to_chat(patient, span_userdanger("Your skin itches and your throat is closing up!"))
+	patient.ForceContractDisease(new /datum/disease/anaphylaxis(), make_copy = FALSE)
+	director.dispatch("[patient_name] is having an allergic reaction to [initial(allergy.name)]! Epinephrine, fast!")
+	director.update_level()
 
 /// Walk-in behaviour: find the chair, sit, wait, give up. Returns FALSE if the patient left.
 /datum/patient_record/proc/process_walkin(mob/living/carbon/human/patient, datum/controller/subsystem/patient_director/director)
@@ -542,6 +576,8 @@ ADMIN_VERB(toggle_patient_director, R_ADMIN|R_FUN, FALSE, "Toggle Patient Direct
 #undef WALKIN_SEAT_TIMEOUT
 #undef HOSPITAL_STARTING_FUNDS
 #undef TRIAGE_BONUS
+#undef ALLERGY_CHANCE
+#undef ALLERGY_KNOWN_CHANCE
 #undef HOSPITAL_START_LEVEL
 #undef EVENT_FIRST_DELAY
 #undef EVENT_MIN_GAP

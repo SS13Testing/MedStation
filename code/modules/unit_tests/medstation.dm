@@ -67,6 +67,18 @@
 	tagged.process_record(director)
 	TEST_ASSERT(director.reputation >= reputation_before + 1 + tagged.case.difficulty, "correct triage should add a reputation bonus")
 
+	// an allergy: giving the wrong medicine sets off anaphylaxis (which blocks discharge until cured)
+	var/datum/patient_record/allergic = director.spawn_patient(/datum/patient_case/burns, run_loc_floor_bottom_left, 1)
+	var/mob/living/carbon/human/allergic_patient = allergic.patient_ref.resolve()
+	allergic.allergy = /datum/reagent/medicine/c2/libital
+	var/reactions_before = director.allergic_reactions
+	allergic_patient.reagents.add_reagent(/datum/reagent/medicine/c2/libital, 5)
+	allergic.process_record(director)
+	TEST_ASSERT_EQUAL(director.allergic_reactions, reactions_before + 1, "the allergic reaction should be counted")
+	TEST_ASSERT(locate(/datum/disease/anaphylaxis) in allergic_patient.diseases, "an allergic reaction should give anaphylaxis")
+	TEST_ASSERT(allergic.reacted, "the record should remember the reaction")
+	director.active -= allergic
+
 	// a death
 	var/datum/patient_record/doomed = director.spawn_patient(/datum/patient_case/burns, run_loc_floor_bottom_left, 1)
 	TEST_ASSERT_NOTNULL(doomed, "second spawn_patient returned no record")
@@ -192,6 +204,10 @@
 	TEST_ASSERT(length(GLOB.supply_drop_points), "map has no /obj/effect/landmark/supply_drop")
 	TEST_ASSERT(length(GLOB.patient_walkin_points), "map has no /obj/effect/landmark/patient_walkin")
 	TEST_ASSERT(length(SSjob.latejoin_trackers), "map has no latejoin landmarks")
+	// the emergency shuttle needs somewhere to dock, or the shift can never end
+	TEST_ASSERT_NOTNULL(SSshuttle.getDock("emergency_home"), "map has no emergency_home docking port")
+	TEST_ASSERT_NOTNULL(SSshuttle.emergency, "no emergency shuttle was loaded")
+	TEST_ASSERT_EQUAL(SSshuttle.emergency.canDock(SSshuttle.getDock("emergency_home")), SHUTTLE_CAN_DOCK, "the emergency shuttle can't dock at emergency_home")
 	// Start landmarks delete themselves once the round has started (before the tests run), so read the map file.
 	var/map_text = file2text("_maps/map_files/debug/medstation.dmm")
 	TEST_ASSERT(length(map_text), "could not read medstation.dmm")

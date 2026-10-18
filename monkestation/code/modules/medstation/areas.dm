@@ -64,3 +64,7 @@
 /area/station/medical/hospital/lockers
 	name = "\improper Locker Room"
 	icon_state = "med_break"
+
+/area/station/medical/hospital/departures
+	name = "\improper Departure Lounge"
+	icon_state = "exit"

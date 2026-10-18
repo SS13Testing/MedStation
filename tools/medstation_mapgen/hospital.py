@@ -112,17 +112,17 @@ class Gen:
 def build():
 	g = Gen()
 	# Wipe the old station interior. Keep clear of the emergency (63,43) and cargo (70,56) docks.
-	cargo_port = [a for a in g.m.get(70, 56) if a.startswith("/obj/docking_port")]
+	ports = {(x, y): [a for a in g.m.get(x, y) if a.startswith("/obj/docking_port")] for x, y in ((70, 56), (63, 43))}
 	g.wipe(1, 26, 71, 80)
-	for a in cargo_port:
-		g.m.set(70, 56, (a,) + SPACE)
+	for (x, y), atoms in ports.items():
+		g.m.set(x, y, tuple(atoms) + SPACE)
 
 	# ---- south band y 45..57
 	g.room("lobby", 6, 45, 20, 57, "/lobby")
 	g.room("triage", 20, 45, 30, 57, "/triage")
 	g.room("er", 30, 45, 46, 57, "/emergency_room")
-	g.room("ward", 46, 45, 58, 57, "/ward")
-	g.room("diag", 58, 45, 68, 57, "/diagnostics")
+	g.room("ward", 46, 49, 58, 57, "/ward")
+	g.room("diag", 58, 49, 68, 57, "/diagnostics")
 	# ---- north band y 61..78
 	g.room("pharm", 6, 61, 20, 78, "/pharmacy")
 	g.room("surga", 20, 61, 30, 78, "/surgery_a")
@@ -133,7 +133,11 @@ def build():
 	# ---- far south band y 33..45
 	g.room("lounge", 6, 33, 20, 45, "/lounge")
 	g.room("bay", 20, 33, 46, 45, "/ambulance_bay", turf="/turf/open/floor/iron")
-	g.room("locker", 46, 33, 52, 45, "/lockers")
+	g.room("locker", 46, 33, 52, 44, "/lockers")
+	# ---- departure lounge: the emergency shuttle docks to its south wall (airlocks at x 55, 57, 63, 65)
+	g.room("depart", 46, 44, 67, 49, "/departures")
+	for x in (55, 57, 63, 65):
+		g.m.set(x, 44, ("/obj/machinery/door/airlock/external/ruin", "/turf/open/floor/plating", g.rooms["depart"][4]))
 	# ---- corridor y 58..60 (walls are the bands' shared y=57 / y=61 lines)
 	for x in range(7, 68):
 		for y in range(58, 61):
@@ -156,7 +160,9 @@ def build():
 	g.door(25, 45, g.rooms["bay"][4])              # bay <-> triage
 	g.door(38, 45, g.rooms["bay"][4])              # bay <-> ER
 	g.door(13, 45, g.rooms["lounge"][4])           # lounge <-> waiting
-	g.door(49, 45, g.rooms["locker"][4])           # lockers <-> ward
+	g.door(49, 44, g.rooms["locker"][4])           # lockers <-> departure lounge
+	g.door(55, 49, g.rooms["depart"][4])           # departure lounge <-> ward
+	g.door(63, 49, g.rooms["depart"][4])           # departure lounge <-> diagnostics
 	g.door(20, 39, g.rooms["lounge"][4])           # lounge <-> bay
 	g.door(46, 39, g.rooms["locker"][4])           # bay <-> lockers
 	g.door(30, 70, g.rooms["surga"][4])            # surgery A <-> B
@@ -238,9 +244,9 @@ def furnish(g):
 	# ------------------------------------------------ inpatient ward
 	x1, y1, x2, y2 = g.ix("ward")
 	for x in range(x1 + 1, x2, 2):
-		for y in (y1 + 1, y1 + 5, y2 - 1):
+		for y in (y1 + 1, y1 + 3, y1 + 5):
 			g.put(x, y, bed)
-		g.put(x + 1 if x + 1 < x2 else x, y1 + 3, "/obj/machinery/iv_drip")
+		g.put(x + 1 if x + 1 < x2 else x, y1 + 2, "/obj/machinery/iv_drip")
 	g.put(x2, y2, "/obj/structure/closet/secure_closet/medical1")
 	g.put(x1, y2, "/obj/machinery/vending/wallmed")
 
@@ -353,6 +359,14 @@ def furnish(g):
 	for x in (x1 + 3, x1 + 5, x1 + 7):
 		g.put(x, y2 - 3, table)
 		g.put(x, y2 - 4, atom(chair, dir=1))
+
+	# ------------------------------------------------ departure lounge
+	x1, y1, x2, y2 = g.ix("depart")
+	for x in range(x1 + 1, x2, 3):
+		g.put(x, y2 - 1, atom(chair, dir=2))
+		g.put(x, y1 + 1, atom(chair, dir=1))
+	g.put(x2, y2, "/obj/machinery/vending/coffee")
+	g.put(x1, y2, "/obj/structure/closet/emcloset")
 
 	# ------------------------------------------------ locker room
 	x1, y1, x2, y2 = g.ix("locker")
