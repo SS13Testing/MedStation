@@ -2,7 +2,9 @@
 /proc/hospital_guide_text()
 	return "<span class='notice'><b>Welcome to the hospital.</b><br>\
 		Patients arrive two ways: <b>ambulances</b> pull into the ambulance bay (south-west) and unload patients on stretchers \
-		(with a paramedic on duty they come as <b>calls</b>: answer them from the dispatch console in the bay or the lounge, the sooner the better, and unanswered calls cost reputation), \
+		(with a paramedic on duty they come as <b>calls</b>: answer one from the dispatch console in the bay or the lounge, then board the <b>ambulance</b> \
+		in the bay and use its console to drive out to the scene; treat the patients there, bring them back on the stretchers and drive home. \
+		The sooner the better: unanswered calls cost reputation, and anyone left at the scene is lost), \
 		and <b>walk-ins</b> come through the waiting room door (west) and sit down. Walk-ins who wait too long leave, and that costs reputation.<br><br>\
 		<b>Every patient holds an intake chart</b> with notes from the crew and any known allergies. It does not give the diagnosis: \
 		scan them with a health analyzer. Untreated patients get worse once their time runs out, unless they are on a <b>stasis bed</b>. \

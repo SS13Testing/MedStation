@@ -252,6 +252,72 @@
 			TEST_ASSERT(!(old_dock in SSshuttle.stationary_docking_ports), "the dock of [where] was left registered after unloading")
 			sleep(1 SECONDS)
 
+/// Answering a call with a scene: the scene loads with patients lying in it, the real ambulance drives out and back, anybody
+/// left behind is lost, and a scene nobody drives to is abandoned as a missed call.
+/datum/unit_test/medstation_scene_calls
+
+/datum/unit_test/medstation_scene_calls/Run()
+	var/datum/controller/subsystem/patient_director/director = SSpatient_director
+	director.active.Cut()
+	director.pending_calls.Cut()
+	director.active_scene = null
+	director.ambulance_away_until = 0
+	var/mob/living/carbon/human/dispatcher = allocate(/mob/living/carbon/human/consistent)
+	var/deceased_before = director.deceased
+
+	// ---- answering a scene call loads the scene with its patients lying in it
+	var/datum/ambulance_call/answered = director.post_call(2, 3, list(/datum/patient_case/burns, /datum/patient_case/respiratory), /datum/medstation_scene/cargo)
+	TEST_ASSERT_NOTNULL(answered.scene_type, "the call should be for a scene")
+	answered.posted_at = world.time - 2 MINUTES
+	TEST_ASSERT(director.dispatch_call(answered, dispatcher), "answering the call should load its scene")
+	var/datum/field_scene/scene = director.active_scene
+	TEST_ASSERT_NOTNULL(scene, "no scene after answering")
+	TEST_ASSERT_NOTNULL(director.get_scene_dock(), "the scene has no dock")
+	TEST_ASSERT(director.ambulance_busy(), "the ambulance counts as busy while a scene is active")
+	var/list/field_records = list()
+	for(var/datum/patient_record/record as anything in director.active)
+		if(record.arrival_mode == PATIENT_ARRIVE_FIELD)
+			field_records += record
+	TEST_ASSERT_EQUAL(length(field_records), 2, "the scene should have both patients")
+	for(var/datum/patient_record/record as anything in field_records)
+		var/mob/living/carbon/human/patient = record.patient_ref.resolve()
+		TEST_ASSERT_NOTNULL(patient, "a scene patient has no body")
+		TEST_ASSERT(scene.contains(patient), "a scene patient should be inside the scene")
+		TEST_ASSERT(patient.body_position == LYING_DOWN, "a scene patient should be lying down")
+		TEST_ASSERT(record.deadline - world.time < record.case.get_deadline() - 90 SECONDS, "the scene patients' clocks should have been running since the call")
+
+	// ---- the crew drive out, bring one patient back and drive home
+	TEST_ASSERT_EQUAL(SSshuttle.moveShuttle("ambulance", "ambulance_scene", FALSE), DOCKING_SUCCESS, "couldn't drive to the scene")
+	director.process_scene()
+	TEST_ASSERT(scene.departed, "the scene should know the ambulance left")
+	var/datum/patient_record/rescued = field_records[1]
+	var/mob/living/carbon/human/rescued_patient = rescued.patient_ref.resolve()
+	rescued_patient.forceMove(get_step(SSshuttle.getDock("ambulance_home"), NORTH))
+	TEST_ASSERT(!scene.contains(rescued_patient), "the rescued patient should be out of the scene")
+	TEST_ASSERT_EQUAL(SSshuttle.moveShuttle("ambulance", "ambulance_home", FALSE), DOCKING_SUCCESS, "couldn't drive home")
+	director.process_scene()
+	TEST_ASSERT_NOTNULL(scene.returned_at, "the scene should notice the ambulance is home")
+	scene.returned_at = world.time - 5 MINUTES
+	var/obj/docking_port/stationary/scene_dock = scene.dock
+	director.process_scene()
+	TEST_ASSERT_NULL(director.active_scene, "the scene should be cleared once the ambulance has been home a while")
+	TEST_ASSERT_EQUAL(director.deceased, deceased_before + 1, "the patient left behind should count as lost")
+	TEST_ASSERT(rescued in director.active, "the rescued patient is still a patient")
+	TEST_ASSERT(!QDELETED(rescued_patient), "the rescued patient must survive the scene being cleared")
+	TEST_ASSERT(!(scene_dock in SSshuttle.stationary_docking_ports), "the scene dock should be gone")
+	director.active.Cut()
+	qdel(rescued_patient)
+
+	// ---- a scene nobody drives out to is abandoned as a missed call
+	var/datum/ambulance_call/ignored = director.post_call(2, 3, list(/datum/patient_case/burns), /datum/medstation_scene/maintenance)
+	TEST_ASSERT(director.dispatch_call(ignored, dispatcher), "answering the second call should work")
+	var/missed_before = director.missed_calls
+	director.active_scene.created_at = world.time - 20 MINUTES
+	director.process_scene()
+	TEST_ASSERT_NULL(director.active_scene, "an abandoned scene should be cleared")
+	TEST_ASSERT_EQUAL(director.missed_calls, missed_before + 1, "an abandoned scene should count as a missed call")
+	TEST_ASSERT(!length(director.active), "an abandoned scene's patients should be dropped")
+
 /// Ambulance calls: they go on the board, expire into lost reputation, and answering one brings the patients back already
 /// closer to their deadline.
 /datum/unit_test/medstation_calls
@@ -382,6 +448,7 @@ TEST_FOCUS(/datum/unit_test/patient_director)
 TEST_FOCUS(/datum/unit_test/medstation_ambulance)
 TEST_FOCUS(/datum/unit_test/medstation_flows)
 TEST_FOCUS(/datum/unit_test/medstation_field)
+TEST_FOCUS(/datum/unit_test/medstation_scene_calls)
 TEST_FOCUS(/datum/unit_test/medstation_calls)
 TEST_FOCUS(/datum/unit_test/medstation_library)
 TEST_FOCUS(/datum/unit_test/medstation_guide)

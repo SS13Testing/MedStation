@@ -7929,6 +7929,7 @@
 #include "monkestation\code\modules\mech_comp\objects\messages\regex\_regex.dm"
 #include "monkestation\code\modules\medstation\ambulance.dm"
 #include "monkestation\code\modules\medstation\ambulance_calls.dm"
+#include "monkestation\code\modules\medstation\field_calls.dm"
 #include "monkestation\code\modules\medstation\field_response.dm"
 #include "monkestation\code\modules\medstation\field_scenes.dm"
 #include "monkestation\code\modules\medstation\areas.dm"

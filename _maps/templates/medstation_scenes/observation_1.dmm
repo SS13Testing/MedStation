@@ -6,47 +6,52 @@
 /turf/open/floor/iron/dark,
 /area/medstation_scene/observation)
 "ac" = (
-/obj/structure/chair,
-/turf/open/floor/iron/dark,
+/obj/structure/grille,
+/obj/structure/window/reinforced/fulltile,
+/turf/open/floor/plating,
 /area/medstation_scene/observation)
 "ad" = (
-/obj/effect/decal/cleanable/blood/old,
-/turf/open/floor/iron/dark,
-/area/medstation_scene/observation)
-"ae" = (
-/obj/structure/table,
-/turf/open/floor/iron/dark,
-/area/medstation_scene/observation)
-"af" = (
 /obj/machinery/light/small/directional/north,
 /turf/open/floor/iron/dark,
 /area/medstation_scene/observation)
-"ag" = (
+"ae" = (
 /obj/effect/landmark/scene_patient,
 /turf/open/floor/iron/dark,
 /area/medstation_scene/observation)
-"ah" = (
-/obj/machinery/light/small/directional/south,
+"af" = (
+/obj/structure/chair,
 /turf/open/floor/iron/dark,
 /area/medstation_scene/observation)
-"ai" = (
-/obj/structure/chair/comfy,
-/turf/open/floor/iron/dark,
-/area/medstation_scene/observation)
-"aj" = (
-/obj/effect/landmark/ambulance_scene_dock,
-/turf/open/floor/iron/dark,
-/area/medstation_scene/observation)
-"ak" = (
+"ag" = (
 /obj/effect/decal/cleanable/glass,
 /turf/open/floor/iron/dark,
 /area/medstation_scene/observation)
-"al" = (
+"ah" = (
+/obj/structure/chair/comfy,
+/turf/open/floor/iron/dark,
+/area/medstation_scene/observation)
+"ai" = (
 /obj/item/shard,
+/turf/open/floor/iron/dark,
+/area/medstation_scene/observation)
+"aj" = (
+/obj/machinery/light/small/directional/south,
+/turf/open/floor/iron/dark,
+/area/medstation_scene/observation)
+"ak" = (
+/obj/effect/decal/cleanable/blood/old,
+/turf/open/floor/iron/dark,
+/area/medstation_scene/observation)
+"al" = (
+/obj/structure/table,
 /turf/open/floor/iron/dark,
 /area/medstation_scene/observation)
 "am" = (
 /obj/structure/grille/broken,
+/turf/open/floor/iron/dark,
+/area/medstation_scene/observation)
+"an" = (
+/obj/effect/landmark/ambulance_scene_dock,
 /turf/open/floor/iron/dark,
 /area/medstation_scene/observation)
 
@@ -79,27 +84,27 @@ ab
 ab
 ab
 ab
-ac
+aa
 ab
 ab
 ab
-ad
+ab
 ab
 ab
 aa
 "}
 (3,1,1) = {"
-aa
-ab
-ab
-ab
-ae
+ac
 ab
 ab
 ab
 ab
 ab
-ad
+ab
+ab
+ab
+ab
+ab
 ab
 ab
 ab
@@ -108,13 +113,13 @@ ab
 aa
 "}
 (4,1,1) = {"
-aa
-af
-ag
+ac
+ad
 ab
 ab
 ab
-ag
+ae
+ab
 ab
 ab
 ab
@@ -127,13 +132,13 @@ ab
 aa
 "}
 (5,1,1) = {"
-aa
+ac
 ab
 ab
+af
+ag
 ab
-ab
-ab
-ab
+ah
 ab
 ab
 ab
@@ -146,35 +151,35 @@ ab
 aa
 "}
 (6,1,1) = {"
+ac
+ab
+ai
+ab
+ab
+ab
+af
+ab
+ab
 aa
 ab
 ab
 ab
 ab
 ab
-ab
-ab
-ab
-ab
-ab
-ab
-ab
-ab
-ab
-ah
+aj
 aa
 "}
 (7,1,1) = {"
-aa
+ac
 ab
 ab
+ah
 ab
 ab
-ab
-ab
+ag
 ae
-ab
-ab
+ak
+aa
 ab
 ab
 ab
@@ -184,16 +189,16 @@ ab
 aa
 "}
 (8,1,1) = {"
+ac
+ab
+ab
+af
+ab
+ak
+ah
+ag
+al
 aa
-ab
-ab
-ab
-ab
-ab
-ab
-ab
-ab
-ab
 ab
 ab
 ab
@@ -203,16 +208,16 @@ ab
 aa
 "}
 (9,1,1) = {"
+ac
+ab
+ab
+af
+ab
+ab
+ah
+ab
+al
 aa
-ab
-ab
-ab
-ab
-ab
-ab
-ab
-ab
-ab
 ab
 ab
 ab
@@ -222,16 +227,16 @@ ab
 aa
 "}
 (10,1,1) = {"
-aa
-af
+ac
+ad
+ab
+am
 ab
 ae
-ad
-ag
+ah
+am
 ab
-ab
-ab
-ai
+aa
 ab
 ab
 ab
@@ -241,16 +246,16 @@ ab
 aa
 "}
 (11,1,1) = {"
+ac
+ab
+ab
+ah
+ab
+ab
+ab
+ab
+al
 aa
-ab
-ab
-ad
-ab
-ab
-ab
-ab
-ab
-ae
 ab
 ab
 ab
@@ -260,16 +265,16 @@ ab
 aa
 "}
 (12,1,1) = {"
+ac
+ab
+ab
+am
+ai
+ab
+ah
+ab
+ab
 aa
-ab
-ab
-ab
-ab
-aa
-aa
-aa
-ab
-ab
 ab
 ab
 ab
@@ -279,13 +284,13 @@ ab
 aa
 "}
 (13,1,1) = {"
-aa
-ab
-ag
+ac
 ab
 ab
 ab
 ab
+ab
+ah
 ab
 ab
 ab
@@ -298,18 +303,18 @@ ab
 aa
 "}
 (14,1,1) = {"
-aa
-ab
-ab
-ab
-ab
-ab
 ac
 ab
 ab
+ah
 ab
 ab
-aj
+ah
+ab
+al
+ab
+ab
+an
 ab
 ab
 ab
@@ -317,11 +322,11 @@ ab
 aa
 "}
 (15,1,1) = {"
-aa
-ae
-ag
+ac
 ab
 ab
+ab
+ak
 ab
 ab
 ab
@@ -336,16 +341,16 @@ ab
 aa
 "}
 (16,1,1) = {"
-aa
 ac
+ad
+ab
+ah
 ab
 ab
+af
 ab
-ab
-ab
-ab
-ab
-ab
+al
+aa
 ab
 ab
 ab
@@ -355,16 +360,16 @@ ab
 aa
 "}
 (17,1,1) = {"
+ac
+ab
+ab
+ab
+ab
+ab
+ab
+ab
+ab
 aa
-ab
-ab
-ab
-ab
-ag
-ab
-ab
-ab
-ab
 ab
 ab
 ab
@@ -374,16 +379,16 @@ ab
 aa
 "}
 (18,1,1) = {"
-aa
-ab
-ab
 ac
-ae
-ak
+ab
+ab
+ah
 ab
 ab
 ab
 ab
+ab
+aa
 ab
 ab
 ab
@@ -393,34 +398,34 @@ ab
 aa
 "}
 (19,1,1) = {"
-aa
-ab
 ac
+ab
+ab
+ab
+ab
+ai
+ab
 ae
 ab
 ab
 ab
-ak
 ab
 ab
-ab
-ab
-al
 ab
 ab
 ab
 aa
 "}
 (20,1,1) = {"
-aa
+ac
 ab
 ab
+af
 ab
 ab
+ai
 ab
-ab
-ab
-ab
+al
 ab
 ab
 ab
@@ -431,15 +436,15 @@ ab
 aa
 "}
 (21,1,1) = {"
-aa
+ac
 ab
 ab
+ah
 ab
 ab
+af
 ab
-ab
-ab
-ab
+al
 ab
 ab
 ab
@@ -450,54 +455,54 @@ ab
 aa
 "}
 (22,1,1) = {"
+ac
+ad
+ae
+ab
+ab
+ab
+ab
+ab
+al
 aa
-af
-ab
-ab
-ai
 ab
 ab
 ab
 ab
 ab
-ak
-ab
-ab
-ab
-ab
-ah
+aj
 aa
 "}
 (23,1,1) = {"
+ac
+ab
+ab
+ab
+ab
+ab
+ab
+ab
+al
 aa
 ab
 ab
 ab
 ab
 ab
-ab
-ab
-ab
-ab
-ab
-ab
-ab
-am
-ad
 ab
 aa
 "}
 (24,1,1) = {"
-aa
+ac
+ab
+ab
+ah
+ai
+ab
+ab
+ab
 al
-ab
-ab
-ab
-ab
-ab
-am
-ab
-ab
+aa
 ab
 ab
 ab
@@ -507,16 +512,16 @@ ab
 aa
 "}
 (25,1,1) = {"
+ac
+ab
+ab
+af
+ab
+ab
+ab
+ab
+ae
 aa
-ab
-ab
-ab
-ab
-ab
-al
-ab
-ab
-al
 ab
 ab
 ab
@@ -527,15 +532,15 @@ aa
 "}
 (26,1,1) = {"
 aa
+ak
+ab
+ab
+ag
 ab
 ab
 ab
 ab
-ab
-ab
-ai
-ab
-ac
+aa
 ab
 ab
 ab

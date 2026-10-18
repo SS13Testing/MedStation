@@ -80,6 +80,11 @@ GLOBAL_LIST_EMPTY(supply_drop_points)
 	cost = 60
 	contents_list = list(/obj/item/triage_tagger = 3)
 
+/datum/hospital_supply/stretchers
+	name = "Emergency stretchers (x2)"
+	cost = 80
+	contents_list = list(/obj/item/emergency_bed = 2)
+
 /datum/hospital_supply/body_bags
 	name = "Body bags"
 	cost = 40

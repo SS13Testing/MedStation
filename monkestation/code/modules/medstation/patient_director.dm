@@ -126,6 +126,7 @@ SUBSYSTEM_DEF(patient_director)
 	for(var/datum/patient_record/record as anything in active.Copy())
 		record.process_record(src)
 	expire_calls()
+	process_scene()
 	if(!enabled)
 		return
 	if(isnull(next_event_time))
@@ -143,7 +144,7 @@ SUBSYSTEM_DEF(patient_director)
 		return
 	var/arrived = FALSE
 	if(room >= 1 && !ambulance_busy() && length(pending_calls) < MAX_PENDING_CALLS && prob(PATIENT_AMBULANCE_CHANCE))
-		arrived = paramedic_on_duty() ? post_call(staff, room) : launch_ambulance(staff, room)
+		arrived = paramedic_on_duty() ? !!post_call(staff, room, null, pick_scene_type()) : launch_ambulance(staff, room)
 	if(!arrived)
 		arrived = !!spawn_patient(staff = staff, arrival_mode = PATIENT_ARRIVE_WALKIN)
 	next_patient_time = world.time + (arrived ? patient_interval(staff) : 15 SECONDS)
@@ -291,7 +292,7 @@ SUBSYSTEM_DEF(patient_director)
 
 /// Is the ambulance parked in the bay or out on a call?
 /datum/controller/subsystem/patient_director/proc/ambulance_busy()
-	return ambulance_present() || world.time < ambulance_away_until
+	return ambulance_present() || world.time < ambulance_away_until || !!active_scene || ambulance_away_from_home()
 
 /// A living paramedic is on duty, so ambulance arrivals become calls somebody has to answer.
 /datum/controller/subsystem/patient_director/proc/paramedic_on_duty()
@@ -301,6 +302,8 @@ SUBSYSTEM_DEF(patient_director)
 	return FALSE
 
 /datum/controller/subsystem/patient_director/proc/ambulance_status()
+	if(active_scene)
+		return active_scene.departed ? "The ambulance is out at [active_scene.template.location_text]." : "A call is being answered: the ambulance is ready to drive out to [active_scene.template.location_text]."
 	if(ambulance_present())
 		return "The ambulance is in the bay."
 	if(world.time < ambulance_away_until)
@@ -308,7 +311,13 @@ SUBSYSTEM_DEF(patient_director)
 	return "The ambulance is free."
 
 /// Puts a call on the board: 1-3 patients somewhere on the station waiting for the ambulance.
-/datum/controller/subsystem/patient_director/proc/post_call(staff, room = 3, list/case_types)
+/datum/controller/subsystem/patient_director/proc/post_call(staff, room = 3, list/case_types, scene_type)
+	var/datum/medstation_scene/scene_definition = scene_type ? new scene_type() : null
+	if(scene_definition && !length(case_types))
+		var/scene_count = clamp(rand(scene_definition.min_patients, scene_definition.max_patients), 1, max(1, min(room, staff + 1, 3)))
+		case_types = list()
+		for(var/i in 1 to scene_count)
+			case_types += pick_weight(scene_definition.cases)
 	if(!length(case_types))
 		var/count = 1
 		if(staff >= 2)
@@ -321,9 +330,9 @@ SUBSYSTEM_DEF(patient_director)
 		"a transit ring corridor", "the hydroponics deck", "the cargo hangar", "a crew quarters block",
 		"the observation deck", "the engineering annex", "the docking arm", "the promenade",
 	)
-	var/datum/ambulance_call/emergency = new(pick(locations), case_types, CALL_WAIT_TIME, rand(CALL_TRAVEL_MIN, CALL_TRAVEL_MAX))
+	var/datum/ambulance_call/emergency = new(scene_definition ? scene_definition.location_text : pick(locations), case_types, CALL_WAIT_TIME, rand(CALL_TRAVEL_MIN, CALL_TRAVEL_MAX), scene_type)
 	pending_calls += emergency
-	dispatch("<b>AMBULANCE CALL</b>: [emergency.label()]. Answer it from the dispatch console.")
+	dispatch("<b>AMBULANCE CALL</b>: [emergency.label()]. Answer it from the dispatch console[scene_type ? ", then take the ambulance out" : ""].")
 	return emergency
 
 /// Calls nobody answered in time are lost.
@@ -341,6 +350,12 @@ SUBSYSTEM_DEF(patient_director)
 /datum/controller/subsystem/patient_director/proc/dispatch_call(datum/ambulance_call/emergency, mob/user)
 	if(!(emergency in pending_calls) || ambulance_busy())
 		return FALSE
+	if(emergency.scene_type)
+		if(!start_scene(emergency))
+			return FALSE
+		pending_calls -= emergency
+		dispatch("[user ? "[user.real_name] is" : "The staff are"] answering the call at [emergency.location]. The scene is ready: take the ambulance out (the console is in the cab).")
+		return TRUE
 	pending_calls -= emergency
 	ambulance_away_until = world.time + emergency.travel_time + 20 SECONDS
 	dispatch("[user ? "[user.real_name] has sent" : "The staff have sent"] the ambulance to [emergency.location]. It will be back in about [round(emergency.travel_time / (1 SECONDS))] seconds.")
@@ -395,11 +410,13 @@ SUBSYSTEM_DEF(patient_director)
 			record.chair_ref = WEAKREF(chair)
 			walk_to(patient, chair, 0, 3)
 		record.patience_until = world.time + case.get_patience()
-	else
+	else if(arrival_mode != PATIENT_ARRIVE_FIELD)
 		var/obj/structure/bed/medical/emergency/stretcher = new(arrival)
 		stretcher.buckle_mob(patient, force = TRUE)
 		record.stretcher_ref = WEAKREF(stretcher)
 	case.apply(patient)
+	if(arrival_mode == PATIENT_ARRIVE_FIELD)
+		patient.set_resting(TRUE) // lying where they were hurt
 	patient.updatehealth()
 
 	active += record
@@ -410,7 +427,7 @@ SUBSYSTEM_DEF(patient_director)
 	if(arrival_mode == PATIENT_ARRIVE_WALKIN)
 		playsound(arrival, 'sound/machines/ding_short.ogg', 40, FALSE)
 		dispatch("A patient has walked into the waiting room: [record.triage_label()], [case.name].")
-	else
+	else if(arrival_mode == PATIENT_ARRIVE_AMBULANCE)
 		dispatch("[record.triage_label()] patient off the ambulance: [case.name].")
 	return record
 
@@ -442,6 +459,11 @@ SUBSYSTEM_DEF(patient_director)
 			record_stat(case, "died")
 			reputation -= case.difficulty * 2
 			dispatch("[record.patient_name] has died. Diagnosis: [case.diagnosis]. Reputation falls.")
+		if(PATIENT_OUTCOME_ABANDONED)
+			deceased++
+			record_stat(case, "died")
+			reputation -= case.difficulty * 2
+			dispatch("[record.patient_name] was left behind at the scene and is lost. Diagnosis: [case.diagnosis]. Reputation falls.")
 		if(PATIENT_OUTCOME_LEFT)
 			walked_out++
 			record_stat(case, "left")

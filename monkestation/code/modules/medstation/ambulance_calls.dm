@@ -11,13 +11,16 @@
 	var/posted_at
 	/// Nobody answered by this time: the call is lost
 	var/expires_at
-	/// How long the ambulance is away fetching them
+	/// How long the ambulance is away fetching them (calls without a scene)
 	var/travel_time
+	/// The kind of scene this call is for (/datum/medstation_scene type), or null for the abstract ambulance trip
+	var/scene_type
 
-/datum/ambulance_call/New(location, list/case_types, wait_time, travel_time)
+/datum/ambulance_call/New(location, list/case_types, wait_time, travel_time, scene_type)
 	src.location = location
 	src.case_types = case_types
 	src.travel_time = travel_time
+	src.scene_type = scene_type
 	posted_at = world.time
 	expires_at = world.time + wait_time
 
@@ -38,6 +41,8 @@
 
 /datum/ambulance_call/proc/label()
 	var/seconds_left = max(0, round((expires_at - world.time) / (1 SECONDS)))
+	if(scene_type)
+		return "[location]: [length(case_types)] patient[length(case_types) > 1 ? "s" : ""], [urgency_label()] ([seconds_left]s left)"
 	return "[location]: [length(case_types)] patient[length(case_types) > 1 ? "s" : ""], [urgency_label()] ([seconds_left]s left, [round(travel_time / (1 SECONDS))]s away)"
 
 /// The console that sends the ambulance out.

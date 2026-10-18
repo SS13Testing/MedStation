@@ -97,6 +97,12 @@
 	/// Turfs with a patient landmark on them
 	var/list/turf/patient_spots = list()
 	var/created_at
+	/// Worst case on the call (1-3), for the reputation penalty if nobody goes
+	var/urgency = 1
+	/// Has the ambulance left the hospital for this scene?
+	var/departed = FALSE
+	/// Since when the ambulance has been back at the hospital
+	var/returned_at
 
 /datum/field_scene/New(datum/medstation_scene/template)
 	src.template = template

@@ -6,47 +6,43 @@
 /turf/open/floor/iron,
 /area/medstation_scene/cargo)
 "ac" = (
-/obj/structure/rack,
-/turf/open/floor/iron,
-/area/medstation_scene/cargo)
-"ad" = (
-/obj/item/stack/package_wrap,
-/turf/open/floor/iron,
-/area/medstation_scene/cargo)
-"ae" = (
-/obj/structure/closet/crate/wooden,
-/turf/open/floor/iron,
-/area/medstation_scene/cargo)
-"af" = (
-/obj/machinery/light/small/directional/north,
-/turf/open/floor/iron,
-/area/medstation_scene/cargo)
-"ag" = (
 /obj/structure/closet/crate/large,
 /turf/open/floor/iron,
 /area/medstation_scene/cargo)
-"ah" = (
-/obj/machinery/light/small/directional/south,
+"ad" = (
+/obj/structure/closet/crate/wooden,
 /turf/open/floor/iron,
 /area/medstation_scene/cargo)
-"ai" = (
-/obj/effect/decal/cleanable/dirt,
+"ae" = (
+/obj/machinery/light/small/directional/north,
 /turf/open/floor/iron,
 /area/medstation_scene/cargo)
-"aj" = (
+"af" = (
+/obj/effect/landmark/scene_patient,
+/turf/open/floor/iron,
+/area/medstation_scene/cargo)
+"ag" = (
 /obj/structure/closet/crate,
 /turf/open/floor/iron,
 /area/medstation_scene/cargo)
+"ah" = (
+/obj/effect/decal/cleanable/dirt,
+/turf/open/floor/iron,
+/area/medstation_scene/cargo)
+"ai" = (
+/obj/machinery/light/small/directional/south,
+/turf/open/floor/iron,
+/area/medstation_scene/cargo)
+"aj" = (
+/obj/effect/decal/cleanable/blood/old,
+/turf/open/floor/iron,
+/area/medstation_scene/cargo)
 "ak" = (
-/obj/effect/landmark/scene_patient,
+/obj/item/stack/package_wrap,
 /turf/open/floor/iron,
 /area/medstation_scene/cargo)
 "al" = (
 /obj/effect/landmark/ambulance_scene_dock,
-/turf/open/floor/iron,
-/area/medstation_scene/cargo)
-"am" = (
-/obj/effect/decal/cleanable/blood/old,
 /turf/open/floor/iron,
 /area/medstation_scene/cargo)
 
@@ -75,12 +71,12 @@ ab
 ab
 ab
 ab
-ac
 ab
 ab
 ab
 ab
-ad
+aa
+ab
 ab
 ab
 ab
@@ -90,10 +86,10 @@ aa
 "}
 (3,1,1) = {"
 aa
-ae
 ab
+ac
 ab
-ab
+ad
 ab
 ab
 ab
@@ -109,15 +105,15 @@ aa
 "}
 (4,1,1) = {"
 aa
+ae
+ab
 af
+ac
 ab
 ab
+ag
 ab
 ab
-ab
-ab
-ab
-ad
 ab
 ab
 ab
@@ -129,12 +125,12 @@ aa
 (5,1,1) = {"
 aa
 ab
-ab
-ab
-ab
+ac
 ab
 ag
-ab
+ah
+ag
+ac
 ab
 ab
 ab
@@ -148,35 +144,35 @@ aa
 (6,1,1) = {"
 aa
 ab
-ab
-ab
-ab
-ab
-ab
-ab
 ag
 ab
+ac
+ab
+ab
+ad
+ab
+aa
 ab
 ab
 ab
 ab
 ab
-ah
+ai
 aa
 "}
 (7,1,1) = {"
 aa
 ab
-ai
 ab
 ab
+ad
 ab
-ab
+ah
 aj
 ab
 ab
 ab
-ad
+ab
 ab
 ab
 ab
@@ -186,12 +182,12 @@ aa
 (8,1,1) = {"
 aa
 ab
+ad
+ab
+ad
 ab
 ab
-ab
-ab
-ai
-ab
+ag
 ab
 ab
 ab
@@ -205,12 +201,12 @@ aa
 (9,1,1) = {"
 aa
 ab
+ad
 ab
 ab
 ab
-ak
 ab
-ab
+ag
 ab
 ab
 ab
@@ -223,15 +219,15 @@ aa
 "}
 (10,1,1) = {"
 aa
+ae
 af
 ab
-ab
-ab
-ak
-ab
+ag
 ab
 ab
 ab
+ag
+aa
 ab
 ab
 ab
@@ -242,6 +238,7 @@ aa
 "}
 (11,1,1) = {"
 aa
+ak
 ab
 ab
 ab
@@ -249,8 +246,7 @@ ab
 ab
 ab
 ab
-ab
-ab
+aa
 ab
 ab
 ab
@@ -261,15 +257,15 @@ aa
 "}
 (12,1,1) = {"
 aa
-ab
-ak
-ab
-ag
+aa
+aa
 ab
 ab
-ak
 ab
-ab
+aa
+aa
+aa
+aa
 ab
 ab
 ab
@@ -281,12 +277,12 @@ aa
 (13,1,1) = {"
 aa
 ab
+ac
 ab
 ab
 ab
-ae
-ab
-ab
+ak
+af
 ab
 ab
 ab
@@ -300,14 +296,14 @@ aa
 (14,1,1) = {"
 aa
 ab
+ab
+af
 ag
 ab
 ab
 ab
 ab
 ab
-ab
-aj
 ab
 al
 ab
@@ -319,9 +315,7 @@ aa
 (15,1,1) = {"
 aa
 ab
-ab
 ag
-ab
 ab
 ab
 ab
@@ -333,19 +327,21 @@ ab
 ab
 ab
 ab
+ab
+ab
 aa
 "}
 (16,1,1) = {"
 aa
-af
-ab
-ab
-ab
-ab
-ab
-ab
 ae
 ab
+ab
+ab
+ab
+aj
+ab
+ab
+aa
 ab
 ab
 ab
@@ -356,15 +352,15 @@ aa
 "}
 (17,1,1) = {"
 aa
-ab
-ab
-ab
-ae
-ab
-ab
+ak
+ac
 ab
 ag
 ab
+ab
+ac
+ab
+aa
 ab
 ab
 ab
@@ -376,17 +372,17 @@ aa
 (18,1,1) = {"
 aa
 ab
+ag
 ab
-ab
-ak
-ab
-ab
-ab
+ad
 ab
 ab
 ab
 ab
-am
+aa
+ab
+ab
+ab
 ab
 ab
 ab
@@ -395,14 +391,14 @@ aa
 (19,1,1) = {"
 aa
 ab
+ac
+ab
+ad
 ab
 ab
+ag
 ab
-ab
-ab
-ab
-ab
-ab
+aa
 ab
 ab
 ab
@@ -414,14 +410,14 @@ aa
 (20,1,1) = {"
 aa
 ab
+ac
 ab
 ab
 ab
 ab
+ad
 ab
-ak
-ab
-ab
+aa
 ab
 ab
 ab
@@ -432,15 +428,15 @@ aa
 "}
 (21,1,1) = {"
 aa
+ak
 ab
 ab
+ac
 ab
 ab
-ab
+ag
 ab
 aa
-ab
-ab
 ab
 ab
 ab
@@ -451,8 +447,10 @@ aa
 "}
 (22,1,1) = {"
 aa
-af
+ae
+ac
 ab
+ag
 ab
 ab
 ab
@@ -463,22 +461,20 @@ ab
 ab
 ab
 ab
-ab
-ab
-ah
+ai
 aa
 "}
 (23,1,1) = {"
 aa
 ab
+ac
+ab
+ab
+ab
+ab
 ab
 ab
 aa
-aa
-aa
-aa
-ab
-ad
 ab
 ab
 ab
@@ -490,14 +486,14 @@ aa
 (24,1,1) = {"
 aa
 ab
+aj
 ab
 ab
+af
 ab
 ab
 ab
 aa
-ab
-ag
 ab
 ab
 ab
@@ -509,33 +505,33 @@ aa
 (25,1,1) = {"
 aa
 ab
-ab
-ac
+ad
+af
+ad
 aj
 ab
+ag
+ab
+aa
 ab
 ab
 ab
 ab
 ab
-ab
-ab
-ab
-ad
 ab
 aa
 "}
 (26,1,1) = {"
 aa
-ai
+ab
+ah
+ab
+ab
+ak
 ab
 ab
 ab
-ab
-ab
-ab
-ab
-ab
+aa
 ab
 ab
 ab

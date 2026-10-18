@@ -6,47 +6,52 @@
 /turf/open/floor/iron/dark,
 /area/medstation_scene/observation)
 "ac" = (
-/obj/structure/grille/broken,
-/turf/open/floor/iron/dark,
+/obj/structure/grille,
+/obj/structure/window/reinforced/fulltile,
+/turf/open/floor/plating,
 /area/medstation_scene/observation)
 "ad" = (
-/obj/structure/chair/comfy,
-/turf/open/floor/iron/dark,
-/area/medstation_scene/observation)
-"ae" = (
-/obj/structure/chair,
-/turf/open/floor/iron/dark,
-/area/medstation_scene/observation)
-"af" = (
-/obj/machinery/light/small/directional/north,
-/turf/open/floor/iron/dark,
-/area/medstation_scene/observation)
-"ag" = (
 /obj/effect/landmark/scene_patient,
 /turf/open/floor/iron/dark,
 /area/medstation_scene/observation)
+"ae" = (
+/obj/machinery/light/small/directional/north,
+/turf/open/floor/iron/dark,
+/area/medstation_scene/observation)
+"af" = (
+/obj/structure/grille/broken,
+/turf/open/floor/iron/dark,
+/area/medstation_scene/observation)
+"ag" = (
+/obj/structure/chair,
+/turf/open/floor/iron/dark,
+/area/medstation_scene/observation)
 "ah" = (
-/obj/machinery/light/small/directional/south,
+/obj/structure/chair/comfy,
 /turf/open/floor/iron/dark,
 /area/medstation_scene/observation)
 "ai" = (
-/obj/effect/decal/cleanable/blood/old,
+/obj/machinery/light/small/directional/south,
 /turf/open/floor/iron/dark,
 /area/medstation_scene/observation)
 "aj" = (
-/obj/item/shard,
-/turf/open/floor/iron/dark,
-/area/medstation_scene/observation)
-"ak" = (
 /obj/effect/decal/cleanable/glass,
 /turf/open/floor/iron/dark,
 /area/medstation_scene/observation)
+"ak" = (
+/obj/structure/table,
+/turf/open/floor/iron/dark,
+/area/medstation_scene/observation)
 "al" = (
-/obj/effect/landmark/ambulance_scene_dock,
+/obj/effect/decal/cleanable/blood/old,
 /turf/open/floor/iron/dark,
 /area/medstation_scene/observation)
 "am" = (
-/obj/structure/table,
+/obj/effect/landmark/ambulance_scene_dock,
+/turf/open/floor/iron/dark,
+/area/medstation_scene/observation)
+"an" = (
+/obj/item/shard,
 /turf/open/floor/iron/dark,
 /area/medstation_scene/observation)
 
@@ -72,14 +77,14 @@ aa
 (2,1,1) = {"
 aa
 ab
-ac
 ab
 ab
 ab
 ab
-ad
 ab
 ab
+ab
+aa
 ab
 ab
 ab
@@ -89,16 +94,16 @@ ab
 aa
 "}
 (3,1,1) = {"
+ac
+ab
+ab
+ab
+ab
+ad
+ab
+ab
+ab
 aa
-ab
-ab
-ab
-ab
-ab
-ae
-ab
-ae
-ab
 ab
 ab
 ab
@@ -108,16 +113,16 @@ ab
 aa
 "}
 (4,1,1) = {"
+ac
+ae
+ab
+ab
+ab
+ab
+ab
+ab
+ab
 aa
-af
-ab
-ab
-ab
-ab
-ab
-ab
-ab
-ab
 ab
 ab
 ab
@@ -127,16 +132,16 @@ ab
 aa
 "}
 (5,1,1) = {"
+ac
+af
+ab
+ab
+ab
+ab
+ab
+ab
+ab
 aa
-ab
-ab
-ab
-ab
-ab
-ab
-ab
-ag
-ab
 ab
 ab
 ab
@@ -146,34 +151,34 @@ ab
 aa
 "}
 (6,1,1) = {"
-aa
+ac
 ab
 ab
-ab
-ab
-ab
-ab
-ab
-ab
-ab
-ab
-ab
-ab
+ag
 ab
 ab
 ah
+ab
+ab
+aa
+ab
+ab
+ab
+ab
+ab
+ai
 aa
 "}
 (7,1,1) = {"
-aa
-ab
-ab
 ac
 ab
 ab
 ab
+aj
 ab
+ag
 ab
+ak
 ab
 ab
 ab
@@ -184,15 +189,15 @@ ab
 aa
 "}
 (8,1,1) = {"
-aa
+ac
 ab
 ab
 ab
-ai
-ag
+ab
+ad
 ab
 ab
-ab
+al
 ab
 ab
 ab
@@ -203,13 +208,13 @@ ab
 aa
 "}
 (9,1,1) = {"
-aa
-aj
+ac
 ab
 ab
+ah
 ab
-ab
-ab
+al
+ag
 ab
 ab
 ab
@@ -222,16 +227,16 @@ ab
 aa
 "}
 (10,1,1) = {"
-aa
-af
-ai
-ab
 ac
-ab
-ag
-ab
+ae
 ab
 ab
+ab
+ab
+ah
+af
+ak
+aa
 ab
 ab
 ab
@@ -241,16 +246,16 @@ ab
 aa
 "}
 (11,1,1) = {"
+ac
+ab
+ab
+ah
+ab
+ad
+aj
+ab
+ab
 aa
-ab
-ak
-ab
-ab
-ab
-ab
-ak
-ab
-ab
 ab
 ab
 ab
@@ -260,16 +265,16 @@ ab
 aa
 "}
 (12,1,1) = {"
+ac
+al
+ab
+ab
+ab
+ab
+ab
+ab
+ak
 aa
-ab
-ab
-ag
-aa
-ai
-ab
-ab
-ab
-ab
 ab
 ab
 ab
@@ -279,15 +284,15 @@ ab
 aa
 "}
 (13,1,1) = {"
-aa
+ac
 ab
 ab
-ab
-aa
-ab
+ah
 ab
 ab
+ag
 ab
+ak
 ab
 ab
 ab
@@ -298,18 +303,18 @@ ab
 aa
 "}
 (14,1,1) = {"
-aa
-ab
-ad
-ab
-aa
-ae
-ab
-ad
+ac
 ab
 ab
 ab
-al
+ab
+ab
+ag
+ab
+ab
+ab
+ab
+am
 ab
 ab
 ab
@@ -317,15 +322,15 @@ ab
 aa
 "}
 (15,1,1) = {"
-aa
-am
+ac
+an
+ad
+ah
 ab
 ab
-aa
 ab
 ab
 ab
-ae
 ab
 ab
 ab
@@ -336,16 +341,16 @@ ab
 aa
 "}
 (16,1,1) = {"
-aa
 ac
+ae
 ab
+ah
 ab
+al
+ah
+ab
+ak
 aa
-ab
-ab
-ab
-ai
-am
 ab
 ab
 ab
@@ -355,16 +360,16 @@ ab
 aa
 "}
 (17,1,1) = {"
+ac
+ab
+ab
+ag
+ab
+ab
+ah
+ab
+ak
 aa
-ad
-ab
-ab
-ab
-ab
-ab
-ab
-ab
-ab
 ab
 ab
 ab
@@ -374,16 +379,16 @@ ab
 aa
 "}
 (18,1,1) = {"
-aa
-ab
-ab
-ab
-ab
-ad
-ab
-ab
 ac
 ab
+ab
+ag
+ab
+ab
+ah
+ab
+af
+aa
 ab
 ab
 ab
@@ -393,17 +398,17 @@ ab
 aa
 "}
 (19,1,1) = {"
-aa
+ac
+ab
+ab
+ah
+ab
+ab
+ah
+an
 ab
 ab
 ab
-ab
-ad
-ab
-ab
-ab
-ab
-ai
 ab
 ab
 ab
@@ -412,15 +417,15 @@ ab
 aa
 "}
 (20,1,1) = {"
-aa
-ab
-ab
-ab
-ag
-ab
 ac
 ab
 ab
+ab
+ab
+ab
+ah
+ad
+ak
 ab
 ab
 ab
@@ -431,14 +436,14 @@ ab
 aa
 "}
 (21,1,1) = {"
-aa
+ac
+ab
+ab
+ag
 ab
 ab
 ab
-ab
-ab
-ab
-ab
+aj
 ab
 ab
 ab
@@ -450,35 +455,35 @@ ab
 aa
 "}
 (22,1,1) = {"
+ac
+ae
+ab
+ab
+ab
+ab
+ab
+ab
+ab
 aa
-af
 ab
 ab
 ab
 ab
 ab
-ab
-ab
-ab
-ab
-ab
-ab
-ab
-ab
-ah
+ai
 aa
 "}
 (23,1,1) = {"
+ac
+ab
+aj
+ag
+ab
+af
+ah
+ab
+ab
 aa
-ab
-ab
-ab
-ab
-ab
-ab
-ab
-ab
-ab
 ab
 ab
 ab
@@ -488,16 +493,16 @@ ab
 aa
 "}
 (24,1,1) = {"
+ac
+ab
+ab
+ab
+ab
+ab
+ab
+ab
+ad
 aa
-ab
-ab
-ab
-ab
-ab
-ab
-ab
-ag
-am
 ab
 ab
 ab
@@ -507,16 +512,16 @@ ab
 aa
 "}
 (25,1,1) = {"
+ac
+ab
+ab
+ah
+ab
+al
+ah
+ab
+ak
 aa
-ab
-ab
-ad
-ab
-ab
-ab
-ab
-ab
-ab
 ab
 ab
 ab
@@ -528,14 +533,14 @@ aa
 (26,1,1) = {"
 aa
 ab
-am
 ab
 ab
 ab
-ae
 ab
 ab
+aj
 ab
+aa
 ab
 ab
 ab
