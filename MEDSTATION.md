@@ -22,6 +22,14 @@ It is playable alone and open to anyone who wants to join.
 6. **Hospital events** (`hospital_events.dm`) shake up a shift every 10-20 minutes: a mass casualty incident, a flu
    outbreak, rush hour. There is no storyteller and no antagonist.
 
+7. **Allergies**: about 30% of patients are allergic to a common medicine and the chart lists it most of the time, not
+   always. A wrong dose causes anaphylaxis (epinephrine treats it), blocks discharge and costs reputation.
+8. **Hospital tiers**: reputation moves the hospital between Failing clinic, Local clinic, Community, Regional, Teaching
+   hospital and Centre of excellence. Higher tiers unlock rarer, harder cases, pay better and hold more patients.
+
+New staff get a welcome guide at spawn (`guide.dm`); the `Hospital Guide` verb shows it again. A shift report (treated, lost,
+left unseen, per-case results, budget) is added to the round end report.
+
 The number of patients scales with how many medical staff are on the station, so a solo player gets a calm hospital
 and a full team gets a busy one. There is a `Hospital Status` verb (IC tab) and admin verbs under Admin.Fun:
 `Spawn Patient`, `Send Ambulance`, `Trigger Hospital Event`, `Toggle Patient Director`.
@@ -34,6 +42,7 @@ The shift never ends by itself (no automatic crew transfer vote): the staff call
 | Patient director, records, arrival logic, admin verbs | `monkestation/code/modules/medstation/patient_director.dm` |
 | Patient cases (the ailments) | `monkestation/code/modules/medstation/patient_cases.dm` |
 | Ambulance, walk-in and parking landmarks | `monkestation/code/modules/medstation/ambulance.dm` |
+| Welcome guide and verb | `monkestation/code/modules/medstation/guide.dm` |
 | Hospital events | `monkestation/code/modules/medstation/hospital_events.dm` |
 | Triage tags and tagger | `monkestation/code/modules/medstation/triage.dm` |
 | Hospital terminal and supply list | `monkestation/code/modules/medstation/hospital_terminal.dm` |

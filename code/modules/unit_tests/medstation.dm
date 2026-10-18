@@ -158,6 +158,14 @@
 	director.reputation = old_reputation
 	director.level = old_level
 
+/// The welcome guide exists and covers the main points.
+/datum/unit_test/medstation_guide
+
+/datum/unit_test/medstation_guide/Run()
+	var/text = hospital_guide_text()
+	for(var/keyword in list("ambulance", "walk-ins", "intake chart", "Triage", "hospital terminal", "Rating", "shuttle"))
+		TEST_ASSERT(findtext(text, keyword), "the hospital guide doesn't mention [keyword]")
+
 /// Every hospital event runs and brings patients (or an ambulance, or a rush).
 /datum/unit_test/medstation_events
 
@@ -217,6 +225,7 @@
 TEST_FOCUS(/datum/unit_test/patient_cases)
 TEST_FOCUS(/datum/unit_test/patient_director)
 TEST_FOCUS(/datum/unit_test/medstation_ambulance)
+TEST_FOCUS(/datum/unit_test/medstation_guide)
 TEST_FOCUS(/datum/unit_test/medstation_levels)
 TEST_FOCUS(/datum/unit_test/medstation_events)
 TEST_FOCUS(/datum/unit_test/medstation_supplies)

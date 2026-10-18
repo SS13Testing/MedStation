@@ -91,6 +91,7 @@ SUBSYSTEM_DEF(patient_director)
 		var/datum/patient_case/case = new case_type()
 		if(case.weight > 0)
 			case_weights[case_type] = case
+	RegisterSignal(SSdcs, COMSIG_GLOB_JOB_AFTER_SPAWN, PROC_REF(on_job_spawn))
 	event_weights = list()
 	for(var/event_type in subtypesof(/datum/hospital_event))
 		var/datum/hospital_event/event = new event_type()
