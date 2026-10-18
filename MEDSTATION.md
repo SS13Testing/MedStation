@@ -127,9 +127,16 @@ Order matters: the core loop at the main hospital comes first.
   test fails if the hospital can't provide it from the start (stock, vending machines, or chemistry from the dispensers;
   only spare organs may be bought). The audit found and fixed: no defibrillator, empty blood freezers, no containers in the
   pharmacy, missing drapes/bonesetter/stethoscope. New cases must declare `needs`.
-- Check the solo experience: pacing of the first patients, how many a single doctor can handle, what a new player is told.
-- Furnish the sparse rooms (isolation lab, pharmacy, lockers) and make the isolation lab matter for infectious patients.
-- Tune payouts, prices and tier thresholds so the budget and the tiers feel earned.
+- ~~Solo experience~~ (done): the first patient arrives after 90 seconds, the first five patients are a training period
+  (1.5x clocks, longer gaps), a lone medic gets longer gaps than a team, and the rare critical cases (heart attack, liver
+  failure, parasite) wait for a Regional hospital.
+- ~~Isolation lab~~ (done): contagious patients' charts say so; the lab is furnished and stocked with antivirals; a contagious
+  patient cured in the lab earns a bonus.
+- ~~Economy~~ (first pass, done): tier thresholds are 6 / 25 / 60 / 120 reputation (modelled: a skilled solo medic reaches the
+  first upgrade in about half an hour), deaths and allergic reactions cost compensation, vending machine refills and a
+  marketing campaign (a ten minute rush hour) give the budget something to do.
+- Still to do: furnish the pharmacy and locker room properly; watch how the budget and pacing feel in real play and retune
+  (all the numbers are constants at the top of `patient_director.dm`, `hospital_terminal.dm` and `patient_cases.dm`).
 
 **2. Field response**
 - **Scene hazards**: spreading fire, gas leaks, live wires, collapses and unstable structures that threaten the crew as well

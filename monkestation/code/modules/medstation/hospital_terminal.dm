@@ -18,6 +18,12 @@ GLOBAL_LIST_EMPTY(supply_drop_points)
 	var/cost = 100
 	/// Typepaths, a number after one means "this many"
 	var/list/contents_list = list()
+	/// Services take effect at once instead of arriving as a crate
+	var/immediate = FALSE
+
+/// What a service does when it is bought (immediate supplies only).
+/datum/hospital_supply/proc/fulfil(datum/controller/subsystem/patient_director/director)
+	return
 
 /datum/hospital_supply/first_aid
 	name = "First aid kits (x3)"
@@ -85,6 +91,31 @@ GLOBAL_LIST_EMPTY(supply_drop_points)
 	cost = 80
 	contents_list = list(/obj/item/emergency_bed = 2)
 
+/datum/hospital_supply/refill_medical
+	name = "NanoMed Plus refill (tools and dressings)"
+	cost = 250
+	contents_list = list(/obj/item/vending_refill/medical = 1)
+
+/datum/hospital_supply/refill_drugs
+	name = "NanoDrug Plus refill (medicines)"
+	cost = 250
+	contents_list = list(/obj/item/vending_refill/drugs = 1)
+
+/datum/hospital_supply/refill_wallmed
+	name = "Wall-mounted NanoMed refill"
+	cost = 150
+	contents_list = list(/obj/item/vending_refill/wallmed = 1)
+
+/// Spend money to attract patients: a rush hour for ten minutes. More patients means more cures, more reputation and more money.
+/datum/hospital_supply/marketing
+	name = "Marketing campaign (rush hour for 10 minutes)"
+	cost = 600
+	immediate = TRUE
+
+/datum/hospital_supply/marketing/fulfil(datum/controller/subsystem/patient_director/director)
+	director.rush_until = world.time + 10 MINUTES
+	director.dispatch("The marketing campaign is on: expect more patients for the next ten minutes.")
+
 /datum/hospital_supply/body_bags
 	name = "Body bags"
 	cost = 40
@@ -144,6 +175,10 @@ GLOBAL_LIST_INIT(hospital_supplies, init_hospital_supplies())
 		return
 	medical.adjust_money(-wanted.cost, "Hospital terminal order: [wanted.name]")
 	playsound(src, 'sound/machines/ping.ogg', 40, FALSE)
+	if(wanted.immediate)
+		to_chat(user, span_notice("Done: [wanted.name]."))
+		wanted.fulfil(SSpatient_director)
+		return
 	to_chat(user, span_notice("Ordered: [wanted.name]. It will arrive in the ambulance bay shortly."))
 	addtimer(CALLBACK(src, PROC_REF(deliver), wanted), delivery_delay)
 

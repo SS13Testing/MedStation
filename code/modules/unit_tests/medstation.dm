@@ -5,10 +5,15 @@
 /datum/unit_test/patient_cases/Run()
 	for(var/case_type in subtypesof(/datum/patient_case))
 		var/datum/patient_case/case = new case_type()
+		// wounds are random: do it a number of times so a rare "already cured" can't hide
+		for(var/attempt in 1 to 15)
+			var/mob/living/carbon/human/patient = allocate(/mob/living/carbon/human/consistent)
+			case.apply(patient)
+			patient.updatehealth()
+			TEST_ASSERT(!case.is_resolved(patient), "[case_type] is already resolved straight after apply() (attempt [attempt])")
 		var/mob/living/carbon/human/patient = allocate(/mob/living/carbon/human/consistent)
 		case.apply(patient)
 		patient.updatehealth()
-		TEST_ASSERT(!case.is_resolved(patient), "[case_type] is already resolved straight after apply()")
 		TEST_ASSERT(length(case.symptoms) && length(case.history), "[case_type] has no symptoms/history for the chart")
 		TEST_ASSERT(case.diagnosis != "Unknown", "[case_type] has no diagnosis")
 		TEST_ASSERT(length(case.treatment) > 30 && case.treatment != /datum/patient_case::treatment, "[case_type] has no treatment hint for the case library")
@@ -264,6 +269,8 @@
 	director.ambulance_away_until = 0
 	var/mob/living/carbon/human/dispatcher = allocate(/mob/living/carbon/human/consistent)
 	var/deceased_before = director.deceased
+	var/old_training = director.training_done
+	director.training_done = TRUE // clocks are compared against the normal length below
 
 	// ---- answering a scene call loads the scene with its patients lying in it
 	var/datum/ambulance_call/answered = director.post_call(2, 3, list(/datum/patient_case/burns, /datum/patient_case/respiratory), /datum/medstation_scene/cargo)
@@ -317,6 +324,7 @@
 	TEST_ASSERT_NULL(director.active_scene, "an abandoned scene should be cleared")
 	TEST_ASSERT_EQUAL(director.missed_calls, missed_before + 1, "an abandoned scene should count as a missed call")
 	TEST_ASSERT(!length(director.active), "an abandoned scene's patients should be dropped")
+	director.training_done = old_training
 
 /// Ambulance calls: they go on the board, expire into lost reputation, and answering one brings the patients back already
 /// closer to their deadline.
@@ -324,6 +332,8 @@
 
 /datum/unit_test/medstation_calls/Run()
 	var/datum/controller/subsystem/patient_director/director = SSpatient_director
+	var/old_training = director.training_done
+	director.training_done = TRUE // clocks are compared against the normal length below
 	director.active.Cut()
 	director.pending_calls.Cut()
 	director.ambulance_away_until = 0
@@ -362,6 +372,7 @@
 		qdel(ambulance)
 	director.active.Cut()
 	director.ambulance_away_until = 0
+	director.training_done = old_training
 
 /// Everything a case needs to be treated (/datum/patient_case/needs) must be obtainable from the start: in the medical areas
 /// (nested contents included), in a vending machine, or (for medicines) makeable by chemistry from what the dispensers hold.
@@ -456,6 +467,98 @@
 					break
 			TEST_ASSERT(found, "[case_type] needs one of [json_encode(group)] but the hospital can't provide any of them")
 
+/// Contagious patients: the chart warns about them and keeping them in the isolation lab earns a bonus.
+/datum/unit_test/medstation_quarantine
+
+/datum/unit_test/medstation_quarantine/Run()
+	var/datum/controller/subsystem/patient_director/director = SSpatient_director
+	director.active.Cut()
+	var/datum/patient_record/sick = director.spawn_patient(/datum/patient_case/flu, run_loc_floor_bottom_left, 1)
+	TEST_ASSERT_NOTNULL(sick, "couldn't spawn a flu patient")
+	var/obj/item/paper/chart = sick.make_chart()
+	var/chart_text = ""
+	for(var/datum/paper_input/input as anything in chart.raw_text_inputs)
+		chart_text += input.raw_text
+	TEST_ASSERT(findtext(chart_text, "contagious"), "a contagious patient's chart should say so")
+	var/datum/patient_record/healthy = director.spawn_patient(/datum/patient_case/burns, run_loc_floor_bottom_left, 1)
+	var/healthy_chart_text = ""
+	for(var/datum/paper_input/input as anything in healthy.make_chart().raw_text_inputs)
+		healthy_chart_text += input.raw_text
+	TEST_ASSERT(!findtext(healthy_chart_text, "contagious"), "a burns patient isn't contagious")
+	// cured without isolation vs cured in isolation
+	var/reputation_before = director.reputation
+	sick.discharge(sick.patient_ref.resolve(), director)
+	var/plain_gain = director.reputation - reputation_before
+	var/datum/patient_record/isolated = director.spawn_patient(/datum/patient_case/flu, run_loc_floor_bottom_left, 1)
+	isolated.isolated = TRUE
+	reputation_before = director.reputation
+	isolated.discharge(isolated.patient_ref.resolve(), director)
+	TEST_ASSERT_EQUAL(director.reputation - reputation_before, plain_gain + 1, "isolating a contagious patient should earn a reputation bonus")
+	director.active.Cut()
+
+/// Money sinks: deaths and allergic reactions cost compensation, and the marketing campaign buys a rush hour.
+/datum/unit_test/medstation_economy
+
+/datum/unit_test/medstation_economy/Run()
+	var/datum/controller/subsystem/patient_director/director = SSpatient_director
+	var/datum/bank_account/department/medical = SSeconomy.get_dep_account(ACCOUNT_MED)
+	TEST_ASSERT_NOTNULL(medical, "no medical budget account")
+	medical.adjust_money(2000)
+	director.active.Cut()
+	// a death costs compensation
+	var/datum/patient_record/doomed = director.spawn_patient(/datum/patient_case/burns, run_loc_floor_bottom_left, 1)
+	var/balance_before = medical.account_balance
+	var/mob/living/carbon/human/body = doomed.patient_ref.resolve()
+	body.death()
+	doomed.process_record(director)
+	TEST_ASSERT(medical.account_balance < balance_before, "a death should cost the hospital compensation")
+	// an allergic reaction costs a fee
+	var/datum/patient_record/allergic = director.spawn_patient(/datum/patient_case/burns, run_loc_floor_bottom_left, 1)
+	allergic.allergy = /datum/reagent/medicine/c2/libital
+	balance_before = medical.account_balance
+	allergic.patient_ref.resolve().reagents.add_reagent(/datum/reagent/medicine/c2/libital, 5)
+	allergic.process_record(director)
+	TEST_ASSERT(medical.account_balance < balance_before, "an allergic reaction should cost a fee")
+	// the marketing campaign is a service that starts a rush hour
+	var/datum/hospital_supply/marketing = GLOB.hospital_supplies["Marketing campaign (rush hour for 10 minutes)"]
+	TEST_ASSERT_NOTNULL(marketing, "the marketing campaign isn't on the terminal")
+	director.rush_until = 0
+	marketing.fulfil(director)
+	TEST_ASSERT(director.rush_until > world.time, "the marketing campaign should start a rush hour")
+	director.rush_until = 0
+	// vending machine refills can be bought
+	TEST_ASSERT_NOTNULL(GLOB.hospital_supplies["NanoMed Plus refill (tools and dressings)"], "no NanoMed Plus refill on the terminal")
+	director.active.Cut()
+
+/// The first few patients are easier (longer clocks, longer gaps); a lone medic gets longer gaps; the rare critical cases wait.
+/datum/unit_test/medstation_solo
+
+/datum/unit_test/medstation_solo/Run()
+	var/datum/controller/subsystem/patient_director/director = SSpatient_director
+	var/old_training = director.training_done
+	director.training_done = FALSE
+	TEST_ASSERT(director.deadline_multiplier() > 1, "the training period should give patients more time")
+	var/datum/patient_case/burns = new /datum/patient_case/burns()
+	var/datum/mob_for_record = allocate(/mob/living/carbon/human/consistent)
+	var/datum/patient_record/training_record = new(mob_for_record, burns, PATIENT_ARRIVE_AMBULANCE)
+	TEST_ASSERT(training_record.deadline - world.time > burns.get_deadline(), "a training patient's clock should be longer than normal")
+	director.training_done = TRUE
+	TEST_ASSERT_EQUAL(director.deadline_multiplier(), 1, "after training the clocks are normal length")
+	var/datum/patient_record/normal_record = new(mob_for_record, burns, PATIENT_ARRIVE_AMBULANCE)
+	TEST_ASSERT(normal_record.deadline - world.time <= burns.get_deadline() + 1, "after training a patient's clock is normal length")
+	// a lone medic waits longer between patients than a pair does
+	var/solo_total = 0
+	var/pair_total = 0
+	for(var/i in 1 to 200)
+		solo_total += director.patient_interval(1)
+		pair_total += director.patient_interval(2)
+	TEST_ASSERT(solo_total > pair_total * 1.3, "a lone medic should get noticeably longer gaps than two medics")
+	// the rare critical cases need a better hospital than the starting one
+	for(var/case_type in list(/datum/patient_case/heart_attack, /datum/patient_case/liver_failure, /datum/patient_case/parasite))
+		var/datum/patient_case/rare = new case_type()
+		TEST_ASSERT(rare.get_min_level() > 3, "[case_type] shouldn't turn up before a regional hospital")
+	director.training_done = old_training
+
 /// The welcome guide exists and covers the main points.
 /datum/unit_test/medstation_guide
 
@@ -509,7 +612,7 @@
 	for(var/supply_name in GLOB.hospital_supplies)
 		var/datum/hospital_supply/supply = GLOB.hospital_supplies[supply_name]
 		TEST_ASSERT(supply.cost > 0, "[supply_name] has no cost")
-		TEST_ASSERT(length(supply.contents_list), "[supply_name] has no contents")
+		TEST_ASSERT(supply.immediate || length(supply.contents_list), "[supply_name] has no contents")
 		var/obj/structure/closet/crate/crate = allocate(/obj/structure/closet/crate)
 		for(var/item_type in supply.contents_list)
 			TEST_ASSERT(ispath(item_type, /obj), "[supply_name] contains [item_type] which is not an object type")
@@ -541,6 +644,9 @@ TEST_FOCUS(/datum/unit_test/patient_director)
 TEST_FOCUS(/datum/unit_test/medstation_ambulance)
 TEST_FOCUS(/datum/unit_test/medstation_flows)
 TEST_FOCUS(/datum/unit_test/medstation_field)
+TEST_FOCUS(/datum/unit_test/medstation_economy)
+TEST_FOCUS(/datum/unit_test/medstation_quarantine)
+TEST_FOCUS(/datum/unit_test/medstation_solo)
 TEST_FOCUS(/datum/unit_test/medstation_treatability)
 TEST_FOCUS(/datum/unit_test/medstation_scene_calls)
 TEST_FOCUS(/datum/unit_test/medstation_calls)

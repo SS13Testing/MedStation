@@ -1,5 +1,11 @@
 /// How long after the round starts before the first patient arrives
-#define PATIENT_FIRST_DELAY (45 SECONDS)
+#define PATIENT_FIRST_DELAY (90 SECONDS)
+/// The first few patients are a training period: more time on their clocks and longer gaps between arrivals
+#define TRAINING_PATIENTS 5
+#define TRAINING_DEADLINE_MULTIPLIER 1.5
+#define TRAINING_INTERVAL_MULTIPLIER 1.3
+/// A lone medic gets longer gaps between patients
+#define SOLO_INTERVAL_MULTIPLIER 1.4
 /// How long a patient who is cured stays around before they are discharged
 #define PATIENT_DISCHARGE_DELAY (20 SECONDS)
 /// Chance that the next arrival is an ambulance (if the bay is free), otherwise somebody walks in
@@ -12,10 +18,10 @@
 GLOBAL_LIST_INIT(hospital_levels, list(
 	list("Failing clinic", -9999, 0.75),
 	list("Local clinic", -10, 1),
-	list("Community hospital", 10, 1.1),
-	list("Regional hospital", 40, 1.25),
-	list("Teaching hospital", 100, 1.4),
-	list("Centre of excellence", 200, 1.6),
+	list("Community hospital", 6, 1.1),
+	list("Regional hospital", 25, 1.25),
+	list("Teaching hospital", 60, 1.4),
+	list("Centre of excellence", 120, 1.6),
 ))
 /// The level a new hospital starts at (index into hospital_levels)
 #define HOSPITAL_START_LEVEL 2
@@ -34,6 +40,11 @@ GLOBAL_LIST_INIT(hospital_levels, list(
 #define CALL_WAIT_TIME (4 MINUTES)
 #define CALL_TRAVEL_MIN (40 SECONDS)
 #define CALL_TRAVEL_MAX (90 SECONDS)
+/// Credits for keeping a contagious patient in the isolation lab until they are cured
+#define QUARANTINE_BONUS 50
+/// A death or a bad allergic reaction costs the hospital compensation: this fraction of the case's payout, or a flat fee
+#define DEATH_COMPENSATION_FRACTION 0.5
+#define ALLERGY_COMPENSATION 50
 /// Credits for tagging a patient with the right triage colour
 #define TRIAGE_BONUS 50
 /// Credits the medical budget starts the round with
@@ -87,6 +98,8 @@ SUBSYSTEM_DEF(patient_director)
 	var/next_event_time
 	/// While this is in the future, patients arrive faster (rush hour)
 	var/rush_until = 0
+	/// Set once the first few patients are over (see TRAINING_PATIENTS)
+	var/training_done = FALSE
 	/// Index into GLOB.hospital_levels. Moves with reputation.
 	var/level = HOSPITAL_START_LEVEL
 	/// The field scene being answered right now (the ambulance is on its way there, at it, or coming back), if any
@@ -195,8 +208,16 @@ SUBSYSTEM_DEF(patient_director)
 		case_stats[case.name] = stats
 	stats[outcome]++
 
+/// Multiplier on how long a patient's clock lasts: generous during the training period.
+/datum/controller/subsystem/patient_director/proc/deadline_multiplier()
+	return training_done ? 1 : TRAINING_DEADLINE_MULTIPLIER
+
 /datum/controller/subsystem/patient_director/proc/patient_interval(staff)
 	var/interval = max(30 SECONDS, rand(90, 180) SECONDS / sqrt(staff))
+	if(staff <= 1)
+		interval *= SOLO_INTERVAL_MULTIPLIER
+	if(!training_done)
+		interval *= TRAINING_INTERVAL_MULTIPLIER
 	if(world.time < rush_until)
 		interval *= 0.4
 	return interval
@@ -415,6 +436,13 @@ SUBSYSTEM_DEF(patient_director)
 		stretcher.buckle_mob(patient, force = TRUE)
 		record.stretcher_ref = WEAKREF(stretcher)
 	case.apply(patient)
+	patient.updatehealth()
+	// a case must never start out cured (a wound failing to take, say): hurt them again until it holds
+	for(var/attempt in 1 to 5)
+		if(!case.is_resolved(patient))
+			break
+		case.apply(patient)
+		patient.updatehealth()
 	if(arrival_mode == PATIENT_ARRIVE_FIELD)
 		patient.set_resting(TRUE) // lying where they were hurt
 	patient.updatehealth()
@@ -440,6 +468,8 @@ SUBSYSTEM_DEF(patient_director)
 /// Called by a record when it ends, whatever the outcome.
 /datum/controller/subsystem/patient_director/proc/finish(datum/patient_record/record, outcome)
 	active -= record
+	if(!training_done && treated + deceased + walked_out >= TRAINING_PATIENTS)
+		training_done = TRUE
 	var/datum/patient_case/case = record.case
 	switch(outcome)
 		if(PATIENT_OUTCOME_TREATED)
@@ -450,6 +480,10 @@ SUBSYSTEM_DEF(patient_director)
 			var/payout = round(case.get_payout() * payout_multiplier())
 			medical?.adjust_money(payout, "Patient discharged: [case.name]")
 			dispatch("[record.patient_name] has been discharged. Diagnosis: [case.diagnosis]. (+[payout] credits)")
+			if(case.infectious && record.isolated)
+				reputation++
+				medical?.adjust_money(QUARANTINE_BONUS, "Good infection control: [case.name]")
+				dispatch("Good infection control on [record.patient_name]: +1 reputation, +[QUARANTINE_BONUS] credits.")
 			if(record.tag_level == case.difficulty)
 				reputation++
 				medical?.adjust_money(TRIAGE_BONUS, "Correct triage: [case.name]")
@@ -458,12 +492,16 @@ SUBSYSTEM_DEF(patient_director)
 			deceased++
 			record_stat(case, "died")
 			reputation -= case.difficulty * 2
-			dispatch("[record.patient_name] has died. Diagnosis: [case.diagnosis]. Reputation falls.")
+			var/compensation = round(case.get_payout() * DEATH_COMPENSATION_FRACTION)
+			SSeconomy.get_dep_account(ACCOUNT_MED)?.adjust_money(-compensation, "Compensation: [case.name]")
+			dispatch("[record.patient_name] has died. Diagnosis: [case.diagnosis]. Reputation falls and the family is owed [compensation] credits.")
 		if(PATIENT_OUTCOME_ABANDONED)
 			deceased++
 			record_stat(case, "died")
 			reputation -= case.difficulty * 2
-			dispatch("[record.patient_name] was left behind at the scene and is lost. Diagnosis: [case.diagnosis]. Reputation falls.")
+			var/abandoned_compensation = round(case.get_payout() * DEATH_COMPENSATION_FRACTION)
+			SSeconomy.get_dep_account(ACCOUNT_MED)?.adjust_money(-abandoned_compensation, "Compensation: [case.name]")
+			dispatch("[record.patient_name] was left behind at the scene and is lost. Diagnosis: [case.diagnosis]. Reputation falls and the family is owed [abandoned_compensation] credits.")
 		if(PATIENT_OUTCOME_LEFT)
 			walked_out++
 			record_stat(case, "left")
@@ -549,6 +587,8 @@ SUBSYSTEM_DEF(patient_director)
 	var/allergy_known = FALSE
 	/// Has the reaction happened already?
 	var/reacted = FALSE
+	/// Contagious patients: were they kept in the isolation lab?
+	var/isolated = FALSE
 	/// TRIAGE_* colour a member of staff tied to the patient, if any
 	var/tag_level
 	/// Walk-ins: has a member of staff taken them out of the waiting room yet?
@@ -560,7 +600,7 @@ SUBSYSTEM_DEF(patient_director)
 	src.arrival_mode = arrival_mode
 	patient_name = patient.real_name
 	arrived_at = world.time
-	deadline = world.time + case.get_deadline()
+	deadline = world.time + case.get_deadline() * SSpatient_director.deadline_multiplier()
 	if(prob(ALLERGY_CHANCE))
 		var/static/list/possible_allergies = list(
 			/datum/reagent/medicine/c2/libital, /datum/reagent/medicine/c2/lenturi, /datum/reagent/medicine/c2/aiuri,
@@ -586,6 +626,8 @@ SUBSYSTEM_DEF(patient_director)
 		"Triage level: [triage_label()]", "<br><b>Notes from the crew:</b>")
 	for(var/line in case.history)
 		lines += "- [line]"
+	if(case.infectious)
+		lines += "<br><b>Nurse's note: feverish and coughing, may be contagious. Keep away from the other patients.</b>"
 	lines += "<br>Known allergies: [allergy && allergy_known ? "<b>[initial(allergy.name)]</b>" : "none reported"]"
 	lines += "<br><i>No diagnosis recorded. Scan the patient.</i>"
 	chart.add_raw_text(lines.Join("<br>"))
@@ -601,6 +643,8 @@ SUBSYSTEM_DEF(patient_director)
 		director.finish(src, PATIENT_OUTCOME_DIED)
 		addtimer(CALLBACK(GLOBAL_PROC, GLOBAL_PROC_REF(collect_patient_body), WEAKREF(patient)), BODY_COLLECTION_TIME)
 		return
+	if(case.infectious && istype(get_area(patient), /area/station/medical/hospital/virology))
+		isolated = TRUE
 	if(discharge_at)
 		if(world.time >= discharge_at)
 			discharge(patient, director)
@@ -626,6 +670,7 @@ SUBSYSTEM_DEF(patient_director)
 	reacted = TRUE
 	director.allergic_reactions++
 	director.reputation--
+	SSeconomy.get_dep_account(ACCOUNT_MED)?.adjust_money(-ALLERGY_COMPENSATION, "Allergic reaction: [patient_name]")
 	patient.visible_message(span_danger("[patient] breaks out in hives and starts wheezing!"))
 	to_chat(patient, span_userdanger("Your skin itches and your throat is closing up!"))
 	patient.ForceContractDisease(new /datum/disease/anaphylaxis(), make_copy = FALSE)
@@ -728,6 +773,13 @@ ADMIN_VERB(toggle_patient_director, R_ADMIN|R_FUN, FALSE, "Toggle Patient Direct
 #undef WALKIN_SEAT_TIMEOUT
 #undef HOSPITAL_STARTING_FUNDS
 #undef TRIAGE_BONUS
+#undef DEATH_COMPENSATION_FRACTION
+#undef ALLERGY_COMPENSATION
+#undef QUARANTINE_BONUS
+#undef TRAINING_PATIENTS
+#undef TRAINING_DEADLINE_MULTIPLIER
+#undef TRAINING_INTERVAL_MULTIPLIER
+#undef SOLO_INTERVAL_MULTIPLIER
 #undef MAX_PENDING_CALLS
 #undef CALL_WAIT_TIME
 #undef CALL_TRAVEL_MIN

@@ -97,7 +97,7 @@
 		var/obj/item/bodypart/limb = random_limb(patient)
 		if(!limb)
 			continue
-		limb.receive_damage(brute = rand(15, 25), wound_bonus = CANT_WOUND)
+		limb.receive_damage(brute = rand(25, 35), wound_bonus = CANT_WOUND)
 		patient.cause_wound_of_type_and_severity(WOUND_BLUNT, limb, WOUND_SEVERITY_MODERATE, WOUND_SEVERITY_SEVERE)
 
 /datum/patient_case/blunt_trauma/is_resolved(mob/living/carbon/human/patient)
@@ -116,7 +116,7 @@
 	var/obj/item/bodypart/limb = random_limb(patient)
 	if(!limb)
 		return
-	limb.receive_damage(brute = rand(15, 25), wound_bonus = CANT_WOUND)
+	limb.receive_damage(brute = rand(25, 35), wound_bonus = CANT_WOUND)
 	patient.cause_wound_of_type_and_severity(WOUND_SLASH, limb, WOUND_SEVERITY_SEVERE, WOUND_SEVERITY_CRITICAL)
 
 /datum/patient_case/laceration/is_resolved(mob/living/carbon/human/patient)
@@ -188,7 +188,7 @@
 	return !patient.reagents.has_reagent(/datum/reagent/toxin/formaldehyde)
 
 /datum/patient_case/liver_failure
-	min_level = 3
+	min_level = 4
 	name = "Yellowing skin, confusion"
 	diagnosis = "Acute liver failure"
 	treatment = "Heal the toxin damage with multiver and either repair the liver or replace it (organ manipulation, donor liver from the terminal)."
@@ -252,7 +252,7 @@
 	return !length(patient.diseases) && patient.getToxLoss() <= 15
 
 /datum/patient_case/parasite
-	min_level = 3
+	min_level = 4
 	name = "Weight loss, abdominal pain"
 	diagnosis = "Parasitic liver infection (needs the liver removed and replaced)"
 	treatment = "The parasite lives in the liver: remove the liver in surgery, then transplant a new one (donor organs can be ordered at the terminal)."
@@ -332,7 +332,7 @@
 	return !chest?.cavity_item && is_generally_stable(patient)
 
 /datum/patient_case/heart_attack
-	min_level = 3
+	min_level = 4
 	name = "Crushing chest pain"
 	diagnosis = "Cardiac arrest"
 	treatment = "Defibrillate (CPR while the defib charges), give epinephrine to restart the heart, then treat the oxygen damage. Stasis buys time."

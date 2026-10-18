@@ -276,7 +276,7 @@ def furnish(g):
 	g.put(x1 + 5, y2, "/obj/machinery/chem_master")
 	g.put(x1 + 7, y2, "/obj/machinery/chem_heater")
 	g.put(x1 + 9, y2, "/obj/machinery/chem_heater")
-	g.put(x2, y2, "/obj/machinery/smartfridge/chemistry")
+	g.put(x2, y2, "/obj/machinery/smartfridge/chemistry/preloaded")  # starting epinephrine and multiver
 	row(g, x1 + 1, x2 - 1, y2 - 2, rtable)
 	g.put(x1 + 2, y2 - 2, "/obj/item/storage/box/beakers")
 	g.put(x1 + 4, y2 - 2, "/obj/item/storage/pill_bottle", "/obj/item/storage/pill_bottle")
@@ -326,16 +326,20 @@ def furnish(g):
 	g.put(x2, y1 + 1, "/obj/structure/closet/crate/freezer")
 	g.put(x1, y1 + 1, "/obj/structure/sink")
 
-	# ------------------------------------------------ isolation lab
+	# ------------------------------------------------ isolation lab (contagious patients go here)
 	x1, y1, x2, y2 = g.ix("viro")
 	g.put(x1, y2, "/obj/machinery/computer/pandemic")
 	g.put(x1 + 2, y2, "/obj/machinery/chem_heater")
-	g.put(x2, y2, "/obj/machinery/smartfridge/chemistry")
-	g.put(x1 + 1, y1 + 2, "/obj/structure/table/reinforced")
-	g.put(x1 + 3, y1 + 2, bed)
-	g.put(x1 + 3, y1 + 5, bed)
+	g.put(x2, y2, "/obj/machinery/smartfridge/chemistry/virology/preloaded")  # starting antivirals
+	g.put(x1 + 1, y2 - 2, "/obj/structure/table/reinforced", "/obj/item/clothing/mask/surgical", "/obj/item/clothing/gloves/latex")
+	g.put(x1 + 3, y2 - 2, "/obj/structure/table/reinforced", "/obj/item/clothing/mask/surgical", "/obj/item/healthanalyzer")
+	for y in (y1 + 4, y1 + 7, y1 + 10):
+		g.put(x1 + 3, y, bed)
+		g.put(x1 + 2, y, "/obj/machinery/iv_drip")
+	g.put(x1, y1 + 4, "/obj/structure/sink")
+	g.put(x1, y1 + 7, "/obj/machinery/shower")
 	g.put(x2, y1 + 1, "/obj/structure/closet/l3closet")
-	g.put(x1, y1 + 1, "/obj/structure/sink")
+	g.put(x1, y1 + 1, "/obj/structure/closet/l3closet")
 
 	# ------------------------------------------------ ambulance bay
 	# The ambulance (3x3, facing east) parks centred on the landmark; patients are wheeled off its rear (west side).
