@@ -261,12 +261,9 @@ def furnish(g):
 	g.put(x1 + 1, y2, "/obj/machinery/sleeper")
 	g.put(x1 + 3, y2, "/obj/machinery/sleeper")
 	g.put(x1 + 5, y2, "/obj/machinery/computer/operating")
-	g.put(x1 + 1, y1 + 5, "/obj/machinery/cryo_cell")
-	g.put(x1 + 4, y1 + 5, "/obj/machinery/cryo_cell")
 	g.put(x1 + 1, y1 + 1, "/obj/machinery/medical_kiosk")
 	g.put(x1 + 3, y1 + 1, "/obj/machinery/computer/crew")
 	g.put(x2, y1 + 1, "/obj/machinery/computer/pandemic")
-	g.put(x2, y1 + 3, "/obj/machinery/dna_scannernew")
 	g.put(x1 + 8, y2, "/obj/structure/sink")
 
 	# ------------------------------------------------ pharmacy
@@ -288,6 +285,14 @@ def furnish(g):
 	g.put(x2, y1 + 3, "/obj/structure/closet/crate/medical")
 	g.put(x1 + 6, y1 + 5, "/obj/machinery/rnd/production/techfab/department/medical")
 	g.put(x1 + 1, y1 + 5, "/obj/structure/sink")
+	# supply shelves along the west wall: dressings for the first busy hours (the vending machines hold few)
+	for i, items in enumerate((
+		("/obj/item/stack/medical/gauze", "/obj/item/stack/medical/gauze"),
+		("/obj/item/stack/medical/suture", "/obj/item/stack/medical/suture"),
+		("/obj/item/stack/medical/mesh", "/obj/item/stack/medical/mesh"),
+		("/obj/item/stack/medical/bone_gel", "/obj/item/stack/medical/ointment", "/obj/item/stack/medical/bruise_pack"),
+	)):
+		g.put(x1, y1 + 8 + i, "/obj/structure/rack", *items)
 
 	# ------------------------------------------------ operating theatres
 	for key, sw in (("surga", "/obj/effect/landmark/start/medical_doctor"), ("surgb", None)):
@@ -337,7 +342,7 @@ def furnish(g):
 		g.put(x1 + 3, y, bed)
 		g.put(x1 + 2, y, "/obj/machinery/iv_drip")
 	g.put(x1, y1 + 4, "/obj/structure/sink")
-	g.put(x1, y1 + 7, "/obj/machinery/shower")
+	g.put(x1, y1 + 7, "/obj/structure/sink")
 	g.put(x2, y1 + 1, "/obj/structure/closet/l3closet")
 	g.put(x1, y1 + 1, "/obj/structure/closet/l3closet")
 
@@ -392,7 +397,6 @@ def furnish(g):
 	for y in range(y1, y2 + 1, 2):
 		g.put(x1, y, "/obj/structure/closet/wardrobe/white")
 		g.put(x2, y, "/obj/structure/closet/secure_closet/medical1")
-	g.put(x1 + 2, y2, "/obj/machinery/recharge_station")
 	g.put(x1 + 3, y2, "/obj/machinery/washing_machine")
 
 

@@ -639,6 +639,85 @@
 	for(var/job_landmark in list("medical_doctor", "paramedic", "chemist", "virologist", "psychologist", "geneticist", "chief_medical_officer"))
 		TEST_ASSERT(findtext(map_text, "/obj/effect/landmark/start/[job_landmark]"), "map has no [job_landmark] start landmark")
 
+/// A long randomised run of the whole director: patients, events, ambulance calls and scenes, with random cures, deaths and
+/// trips of the ambulance, then a check that nothing threw a runtime and that nothing leaked. Kept last so it can't upset the
+/// other tests.
+/datum/unit_test/medstation_soak
+
+/datum/unit_test/medstation_soak/Run()
+	var/datum/controller/subsystem/patient_director/director = SSpatient_director
+	var/runtimes_before = GLOB.total_runtimes
+	var/old_reputation = director.reputation
+	var/old_level = director.level
+	var/old_training = director.training_done
+	var/mob/living/carbon/human/dispatcher = allocate(/mob/living/carbon/human/consistent)
+	var/obj/docking_port/mobile/ambulance = SSshuttle.getShuttle("ambulance")
+	director.staff_override = 3
+	director.paramedic_override = TRUE
+	director.active.Cut()
+	director.pending_calls.Cut()
+	director.ambulance_away_until = 0
+	if(director.active_scene)
+		director.end_scene(TRUE)
+	var/scenes_started = 0
+	var/most_active = 0
+	for(var/i in 1 to 250)
+		director.next_patient_time = 0
+		if(i % 8 == 0)
+			director.next_event_time = 0
+		director.fire()
+		most_active = max(most_active, length(director.active))
+		for(var/datum/patient_record/record as anything in director.active.Copy())
+			var/mob/living/carbon/human/patient = record.patient_ref?.resolve()
+			if(QDELETED(patient))
+				continue
+			switch(rand(1, 24))
+				if(1, 2)
+					record.discharge_at = world.time // treated
+				if(3)
+					patient.death()
+				if(4)
+					record.patience_until = world.time // a walk-in loses patience
+		for(var/datum/ambulance_call/emergency as anything in director.pending_calls.Copy())
+			if(prob(40) && director.dispatch_call(emergency, dispatcher))
+				scenes_started++
+		if(director.active_scene && ambulance)
+			if(!director.ambulance_away_from_home() && prob(50))
+				SSshuttle.moveShuttle("ambulance", "ambulance_scene", FALSE)
+			else if(director.ambulance_away_from_home() && prob(50))
+				SSshuttle.moveShuttle("ambulance", "ambulance_home", FALSE)
+		director.process_scene()
+		if(director.active_scene && prob(15)) // fast-forward the scene's clocks
+			director.active_scene.created_at -= 10 MINUTES
+			if(director.active_scene.returned_at)
+				director.active_scene.returned_at -= 5 MINUTES
+		if(i % 25 == 0)
+			sleep(2 SECONDS) // let the unloading timers and animations run
+
+	// wrap up: get the ambulance home, clear the scene, remove everything we spawned
+	if(director.active_scene)
+		if(ambulance && director.ambulance_away_from_home())
+			SSshuttle.moveShuttle("ambulance", "ambulance_home", FALSE)
+		director.end_scene(TRUE)
+	for(var/datum/patient_record/record as anything in director.active.Copy())
+		var/mob/living/carbon/human/patient = record.patient_ref?.resolve()
+		if(patient)
+			qdel(patient)
+	director.active.Cut()
+	director.pending_calls.Cut()
+	for(var/obj/structure/medstation_ambulance/npc_ambulance in world)
+		qdel(npc_ambulance)
+	director.staff_override = null
+	director.paramedic_override = FALSE
+	director.ambulance_away_until = 0
+	director.reputation = old_reputation
+	director.level = old_level
+	director.training_done = old_training
+	TEST_ASSERT_EQUAL(GLOB.total_runtimes, runtimes_before, "runtime errors happened during the soak run")
+	TEST_ASSERT(scenes_started > 0, "the soak run never answered a scene call")
+	TEST_ASSERT(most_active < 60, "patients piled up without limit ([most_active])")
+	TEST_ASSERT(!director.ambulance_away_from_home(), "the ambulance should be home after the soak run")
+
 TEST_FOCUS(/datum/unit_test/patient_cases)
 TEST_FOCUS(/datum/unit_test/patient_director)
 TEST_FOCUS(/datum/unit_test/medstation_ambulance)
@@ -656,4 +735,5 @@ TEST_FOCUS(/datum/unit_test/medstation_levels)
 TEST_FOCUS(/datum/unit_test/medstation_events)
 TEST_FOCUS(/datum/unit_test/medstation_supplies)
 TEST_FOCUS(/datum/unit_test/medstation_map)
+TEST_FOCUS(/datum/unit_test/medstation_soak)
 #endif

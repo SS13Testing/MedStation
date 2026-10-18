@@ -109,6 +109,12 @@ BYOND has no macOS build, so everything runs in a Linux container. `tools/medsta
     tools/medstation_dev.sh test-run  # re-run those tests without recompiling
     tools/medstation_dev.sh stop
 
+The tests (`code/modules/unit_tests/medstation.dm`, all focused so only they run) go from unit checks of each case up to
+timed flows on the real map (ambulance, walk-ins, scene calls, loading every scene variant and driving the shuttle there and
+back), a treatability check (every case's needs are on the shelves), and a 70 second randomised soak of the whole director
+that fails on any runtime error. Map files are read at run time, so after changing only a map `test-run` is enough; after
+changing code run `test`.
+
 Join with a BYOND 516 client at `<host>:1337`. Compiling rewrites some tracked files under `icons/map_icons/`;
 don't commit those.
 
@@ -137,6 +143,7 @@ Order matters: the core loop at the main hospital comes first.
   marketing campaign (a ten minute rush hour) give the budget something to do.
 - Still to do: furnish the pharmacy and locker room properly; watch how the budget and pacing feel in real play and retune
   (all the numbers are constants at the top of `patient_director.dm`, `hospital_terminal.dm` and `patient_cases.dm`).
+  Machines that need pipes or plumbing (cryo tubes, showers) are left out of the hospital because it has none.
 
 **2. Field response**
 - **Scene hazards**: spreading fire, gas leaks, live wires, collapses and unstable structures that threaten the crew as well

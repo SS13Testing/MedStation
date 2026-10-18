@@ -76,6 +76,9 @@ SUBSYSTEM_DEF(patient_director)
 
 	/// Set to FALSE to stop new patients arriving (admins)
 	var/enabled = TRUE
+	/// Testing only: pretend this many medical staff are on duty / that a paramedic is
+	var/staff_override
+	var/paramedic_override = FALSE
 	/// Active patients, as /datum/patient_record
 	var/list/datum/patient_record/active = list()
 	/// When the next arrival is due. Set on the first fire of the round.
@@ -172,7 +175,7 @@ SUBSYSTEM_DEF(patient_director)
 			. += player
 
 /datum/controller/subsystem/patient_director/proc/count_staff()
-	return length(get_staff())
+	return staff_override || length(get_staff())
 
 /datum/controller/subsystem/patient_director/proc/max_patients(staff)
 	return min(2 + staff * 2 + max(0, level - HOSPITAL_START_LEVEL), 18)
@@ -317,6 +320,8 @@ SUBSYSTEM_DEF(patient_director)
 
 /// A living paramedic is on duty, so ambulance arrivals become calls somebody has to answer.
 /datum/controller/subsystem/patient_director/proc/paramedic_on_duty()
+	if(paramedic_override)
+		return TRUE
 	for(var/mob/living/staff_member as anything in get_staff())
 		if(staff_member.mind?.assigned_role?.title == JOB_PARAMEDIC)
 			return TRUE
