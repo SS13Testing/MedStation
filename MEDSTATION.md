@@ -27,6 +27,9 @@ It is playable alone and open to anyone who wants to join.
 8. **Hospital tiers**: reputation moves the hospital between Failing clinic, Local clinic, Community, Regional, Teaching
    hospital and Centre of excellence. Higher tiers unlock rarer, harder cases, pay better and hold more patients.
 
+The **Case Library** (hospital terminal, or the `Case Library` verb) lists each kind of case the staff have seen with its
+diagnosis and a treatment hint; unseen cases stay hidden until the first one is treated (or lost).
+
 New staff get a welcome guide at spawn (`guide.dm`); the `Hospital Guide` verb shows it again. A shift report (treated, lost,
 left unseen, per-case results, budget) is added to the round end report.
 
@@ -70,7 +73,7 @@ self-contained. Powering and atmospherics are a future feature (blackouts as an 
 
 - **A new ailment**: add a subtype of `/datum/patient_case` in `patient_cases.dm`. Fill in `name`, `diagnosis`,
   `difficulty` (1-3), `symptoms`, `history`, `arrival_modes`, then `apply()` (inflict it), `is_resolved()` (when it is
-  cured, must be FALSE straight after `apply()`) and optionally `worsen()`. The unit tests check the basics for every case.
+  cured, must be FALSE straight after `apply()`) and optionally `worsen()`. Add a `treatment` hint for the case library. The unit tests check the basics for every case.
 - **A new hospital event**: add a subtype of `/datum/hospital_event` in `hospital_events.dm` with a `name`, `weight`,
   `min_staff`, `announcement` and a `start_event()` (`run` is a reserved word in DM).
 - **A new supply**: add a subtype of `/datum/hospital_supply` in `hospital_terminal.dm`.

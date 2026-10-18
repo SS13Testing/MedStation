@@ -9,6 +9,8 @@
 	var/name = "Unknown complaint"
 	/// What it really is. Only revealed to the staff once the patient is discharged or dies.
 	var/diagnosis = "Unknown"
+	/// How to treat it. Shown in the case library once the staff have seen this kind of case.
+	var/treatment = "Scan the patient and treat what you find."
 	/// 1 = minor, 2 = serious, 3 = critical. Drives the deadline, the payout and the score.
 	var/difficulty = 1
 	/// Relative chance to be picked
@@ -81,6 +83,7 @@
 /datum/patient_case/blunt_trauma
 	name = "Fall / crush injury"
 	diagnosis = "Fractures from blunt trauma"
+	treatment = "Set the broken bones (bone gel, bonesetter or the fracture-repair surgery), then heal the bruising with brute medicine, sutures or a trauma kit. Gauze slows any bleeding."
 	difficulty = 2
 	symptoms = list("My leg... I can't move it!", "I think something's broken.", "It hurts to breathe, doc.")
 	history = list("Found at the bottom of a stairwell on the transit ring.", "Conscious, in significant pain.")
@@ -99,6 +102,7 @@
 /datum/patient_case/laceration
 	name = "Deep laceration"
 	diagnosis = "Arterial laceration, ongoing bleeding"
+	treatment = "Stop the bleeding first (gauze or sutures). If they have lost a lot of blood, transfuse the right blood type, then heal the brute damage."
 	difficulty = 2
 	symptoms = list("It won't stop bleeding!", "I feel dizzy...", "Please, I'm losing a lot of blood.")
 	history = list("Cut on a piece of machinery.", "Bleeding through a field dressing.")
@@ -116,6 +120,7 @@
 /datum/patient_case/burns
 	name = "Burn injury"
 	diagnosis = "Second and third degree burns"
+	treatment = "Mesh or ointment for the burns, burn medicine (aiuri or lenturi) for the rest. Treat the burn wound so it doesn't get infected."
 	difficulty = 1
 	symptoms = list("It burns...", "Please, something for the pain.", "My arm... it's all blistered.")
 	history = list("Caught in a small electrical fire.", "Burns to the arms and torso.")
@@ -132,6 +137,7 @@
 /datum/patient_case/chest_wound
 	name = "Penetrating chest wound"
 	diagnosis = "Punctured lung from a penetrating chest wound"
+	treatment = "Put them on a stasis bed straight away. Repair the puncture wound, give oxygen medicine (salbutamol or convermol) and heal the lung damage; severe lung damage needs surgery."
 	difficulty = 3
 	min_staff = 2
 	weight = 6
@@ -156,6 +162,7 @@
 /datum/patient_case/poisoning
 	name = "Suspected poisoning"
 	diagnosis = "Formaldehyde ingestion"
+	treatment = "Scan them to see what is in their blood, purge it with multiver, then heal the toxin damage."
 	difficulty = 2
 	symptoms = list("I feel sick...", "My stomach is on fire.", "I drank something from the lab fridge...")
 	history = list("Mistook a chemical sample for a drink.", "Nauseous, vomiting.")
@@ -176,6 +183,7 @@
 	min_level = 3
 	name = "Yellowing skin, confusion"
 	diagnosis = "Acute liver failure"
+	treatment = "Heal the toxin damage with multiver and either repair the liver or replace it (organ manipulation, donor liver from the terminal)."
 	difficulty = 3
 	min_staff = 2
 	weight = 6
@@ -195,6 +203,7 @@
 /datum/patient_case/respiratory
 	name = "Shortness of breath"
 	diagnosis = "Acute respiratory distress"
+	treatment = "Give oxygen medicine (salbutamol or convermol), keep their airway clear and heal the lung damage; severe damage needs lung surgery."
 	difficulty = 2
 	symptoms = list("I can't catch my breath...", "*cough* *cough*", "Everything's going dark.")
 	history = list("Inhaled fumes from a coolant leak.", "Wheezing, lips turning blue.")
@@ -214,6 +223,7 @@
 /datum/patient_case/flu
 	name = "Fever and cough"
 	diagnosis = "Influenza"
+	treatment = "Spaceacillin cures it. Keep them out of the wards and away from the other patients (the isolation lab) until they are better."
 	difficulty = 1
 	weight = 14
 	infectious = TRUE
@@ -234,6 +244,7 @@
 	min_level = 3
 	name = "Weight loss, abdominal pain"
 	diagnosis = "Parasitic liver infection (needs the liver removed and replaced)"
+	treatment = "The parasite lives in the liver: remove the liver in surgery, then transplant a new one (donor organs can be ordered at the terminal)."
 	difficulty = 3
 	min_staff = 2
 	weight = 5
@@ -255,6 +266,7 @@
 /datum/patient_case/appendicitis
 	name = "Severe abdominal pain"
 	diagnosis = "Appendicitis (the appendix has to come out)"
+	treatment = "Operate: remove the inflamed appendix with organ manipulation surgery. Don't leave it too long, it will burst."
 	difficulty = 2
 	weight = 9
 	symptoms = list("It hurts right here, low on the right...", "I feel sick and I think I have a fever.", "*groans* My stomach...")
@@ -283,6 +295,7 @@
 /datum/patient_case/shrapnel
 	name = "Debris injury to the chest"
 	diagnosis = "Glass shard lodged in the chest cavity (cavity surgery to remove it)"
+	treatment = "Cavity surgery to take the foreign body out of the chest, then close the wound and heal the damage."
 	difficulty = 2
 	weight = 7
 	arrival_modes = list(PATIENT_ARRIVE_AMBULANCE)
@@ -308,6 +321,7 @@
 	min_level = 3
 	name = "Crushing chest pain"
 	diagnosis = "Cardiac arrest"
+	treatment = "Defibrillate (CPR while the defib charges), give epinephrine to restart the heart, then treat the oxygen damage. Stasis buys time."
 	difficulty = 3
 	min_staff = 2
 	weight = 5
@@ -328,6 +342,7 @@
 /datum/patient_case/head_injury
 	name = "Head trauma"
 	diagnosis = "Traumatic brain injury"
+	treatment = "Give mannitol for the brain damage and keep them on a stasis bed while unconscious; severe cases need brain surgery."
 	difficulty = 3
 	min_staff = 2
 	weight = 5
@@ -348,6 +363,7 @@
 /datum/patient_case/eye_injury
 	name = "Eye injury"
 	diagnosis = "Chemical damage to the eyes"
+	treatment = "Oculine restores the eyes quickly, or do eye surgery for serious damage."
 	difficulty = 1
 	weight = 8
 	arrival_modes = list(PATIENT_ARRIVE_WALKIN)

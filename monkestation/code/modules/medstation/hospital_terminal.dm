@@ -109,12 +109,14 @@ GLOBAL_LIST_INIT(hospital_supplies, init_hospital_supplies())
 	var/delivery_delay = 20 SECONDS
 
 /obj/machinery/computer/hospital_terminal/ui_interact(mob/user, datum/tgui/ui)
-	var/choice = tgui_input_list(user, "What would you like to do?", name, list("Hospital status", "Order supplies"))
+	var/choice = tgui_input_list(user, "What would you like to do?", name, list("Hospital status", "Case library", "Order supplies"))
 	if(!choice || !user.can_perform_action(src, NEED_DEXTERITY | ALLOW_SILICON_REACH))
 		return
 	switch(choice)
 		if("Hospital status")
 			to_chat(user, SSpatient_director.get_status_text())
+		if("Case library")
+			to_chat(user, boxed_message(SSpatient_director.get_library_text()))
 		if("Order supplies")
 			order_supplies(user)
 

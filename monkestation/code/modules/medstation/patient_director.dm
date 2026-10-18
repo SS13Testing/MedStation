@@ -82,6 +82,8 @@ SUBSYSTEM_DEF(patient_director)
 	var/rush_until = 0
 	/// Index into GLOB.hospital_levels. Moves with reputation.
 	var/level = HOSPITAL_START_LEVEL
+	/// Case types the staff have seen at least once, for the case library
+	var/list/discovered = list()
 	/// Per case name: list("treated" = n, "died" = n, "left" = n), for the shift report
 	var/list/case_stats = list()
 
@@ -169,6 +171,7 @@ SUBSYSTEM_DEF(patient_director)
 
 /// Records how a case went for the shift report.
 /datum/controller/subsystem/patient_director/proc/record_stat(datum/patient_case/case, outcome)
+	discovered[case.type] = TRUE
 	var/list/stats = case_stats[case.name]
 	if(!stats)
 		stats = list("treated" = 0, "died" = 0, "left" = 0)
@@ -357,6 +360,22 @@ SUBSYSTEM_DEF(patient_director)
 			dispatch("[record.patient_name] got tired of waiting and left without being seen. Reputation falls.")
 	update_level()
 
+/// The case library: every kind of case the staff have handled, with diagnosis and treatment.
+/datum/controller/subsystem/patient_director/proc/get_library_text()
+	var/list/lines = list("<b>Case library</b>")
+	var/unseen = 0
+	for(var/case_type in case_weights)
+		if(!discovered[case_type])
+			unseen++
+			continue
+		var/datum/patient_case/case = case_weights[case_type]
+		lines += "<br><b>[case.name]</b> ([case.difficulty == 1 ? "minor" : (case.difficulty == 2 ? "serious" : "critical")])"
+		lines += "Diagnosis: [case.diagnosis]"
+		lines += "Treatment: [case.treatment]"
+	if(unseen)
+		lines += "<br><i>[unseen] kind[unseen == 1 ? "" : "s"] of patient you have not seen yet. Treat them (or lose them) to add them here.</i>"
+	return lines.Join("<br>")
+
 /// The hospital's page in the round end report.
 /datum/controller/subsystem/patient_director/proc/shift_report()
 	var/list/parts = list("<div class='panel stationborder'><span class='header'>Hospital shift report</span><br>")
@@ -531,6 +550,11 @@ SUBSYSTEM_DEF(patient_director)
 	QDEL_IN(patient, 1 SECONDS)
 
 // ------------------------------------------------------------------ player / admin interface
+
+/mob/living/carbon/human/verb/case_library()
+	set name = "Case Library"
+	set category = "IC"
+	to_chat(src, boxed_message(SSpatient_director.get_library_text()))
 
 /mob/living/carbon/human/verb/hospital_status()
 	set name = "Hospital Status"

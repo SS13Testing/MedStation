@@ -11,6 +11,7 @@
 		TEST_ASSERT(!case.is_resolved(patient), "[case_type] is already resolved straight after apply()")
 		TEST_ASSERT(length(case.symptoms) && length(case.history), "[case_type] has no symptoms/history for the chart")
 		TEST_ASSERT(case.diagnosis != "Unknown", "[case_type] has no diagnosis")
+		TEST_ASSERT(length(case.treatment) > 30 && case.treatment != /datum/patient_case::treatment, "[case_type] has no treatment hint for the case library")
 		case.worsen(patient)
 
 /// The director can bring a patient in, score a cure and score a death.
@@ -166,6 +167,22 @@
 	for(var/keyword in list("ambulance", "walk-ins", "intake chart", "Triage", "hospital terminal", "Rating", "shuttle"))
 		TEST_ASSERT(findtext(text, keyword), "the hospital guide doesn't mention [keyword]")
 
+/// The case library only shows cases the staff have seen.
+/datum/unit_test/medstation_library
+
+/datum/unit_test/medstation_library/Run()
+	var/datum/controller/subsystem/patient_director/director = SSpatient_director
+	var/old_discovered = director.discovered
+	director.discovered = list()
+	var/text = director.get_library_text()
+	TEST_ASSERT(!findtext(text, "Appendicitis"), "an unseen case shouldn't be in the library")
+	TEST_ASSERT(findtext(text, "not seen yet"), "the library should say how many cases are still unseen")
+	director.record_stat(new /datum/patient_case/appendicitis(), "treated")
+	text = director.get_library_text()
+	TEST_ASSERT(findtext(text, "organ manipulation"), "a seen case should show its treatment")
+	director.case_stats = list()
+	director.discovered = old_discovered
+
 /// Every hospital event runs and brings patients (or an ambulance, or a rush).
 /datum/unit_test/medstation_events
 
@@ -225,6 +242,7 @@
 TEST_FOCUS(/datum/unit_test/patient_cases)
 TEST_FOCUS(/datum/unit_test/patient_director)
 TEST_FOCUS(/datum/unit_test/medstation_ambulance)
+TEST_FOCUS(/datum/unit_test/medstation_library)
 TEST_FOCUS(/datum/unit_test/medstation_guide)
 TEST_FOCUS(/datum/unit_test/medstation_levels)
 TEST_FOCUS(/datum/unit_test/medstation_events)
