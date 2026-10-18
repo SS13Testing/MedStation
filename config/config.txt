@@ -12,6 +12,9 @@ $include plexora.txt
 $include map_vote.txt
 $include storyteller.txt
 
+## MedStation: no storyteller, so no antagonists or random hostile events.
+DISABLE_STORYTELLER
+
 # You can use the @ character at the beginning of a config option to lock it from being edited in-game
 # Example usage:
 # @SERVERNAME tgstation
@@ -228,7 +231,7 @@ REQUEST_INTERNET_ALLOWED youtube\.com\/watch?v=,youtu\.be\/,soundcloud\.com\/,ba
 ## Jobs have specific "keys" tied to their in-game datums, those should sync up otherwise it will fail to load.
 ## Setting Total/Spawn Positions to -1 will open unlimited join slots for it.
 ## Playtime Requirements is in minutes, Required Account Age is in days.
-#LOAD_JOBS_FROM_TXT
+LOAD_JOBS_FROM_TXT
 
 ## Uncomment this to forbid admins from possessing the singularity.
 ## It is intentional that Admins can edit this config, as its meant to serve as a deterrent/warning for admin abuse.

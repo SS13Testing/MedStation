@@ -14,40 +14,8 @@ Format:
 	feedbackurl (link in-game shown to players to leave feedback for the map)
 endmap
 
-map heliostation
-	minplayers 25
-	votable
-endmap
-
-map metastation
-	#default
-	minplayers 5
-	votable
-endmap
-
-map deltastation
-	minplayers 50
-	votable
-endmap
-
-map kilostation
-	minplayers 5
-	votable
-endmap
-
-map icebox
-	minplayers 25
-	votable
-endmap
-
-map theseus
-	minplayers 5
-	votable
-	#feedbacklink https://www.youtube.com/watch?v=XG8b7WhANNA
-endmap
-
-map tramstation
-	minplayers 35
+map medstation
+	default
 	votable
 endmap
 
@@ -55,39 +23,4 @@ map runtimestation
 endmap
 
 map multiz_debug
-endmap
-
-map boxstation
-	minplayers 25
-	votable
-endmap
-
-map blueshift
-	minplayers 75
-	votable
-endmap
-
-map voidraptor
-	minplayers 40
-	votable
-endmap
-
-map ouroboros
-	votable
-endmap
-
-map pubbystation
-	votable
-endmap
-
-map graveyard
-endmap
-
-map leadpoisoningstation
-	votable
-	minplayers 40
-endmap
-
-map oshan
-	votable
 endmap

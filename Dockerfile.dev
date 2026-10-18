@@ -1,0 +1,35 @@
+# MedStation dev image: BYOND + rust-g on Ubuntu 22.04. Source is mounted at /tgstation at run time.
+FROM --platform=linux/amd64 ubuntu:22.04 AS base
+ENV DEBIAN_FRONTEND=noninteractive
+RUN dpkg --add-architecture i386 \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends ca-certificates curl unzip make git python3 xz-utils \
+        libc6:i386 libstdc++6:i386 libcurl4:i386 libssl3:i386 zlib1g:i386 \
+    && rm -rf /var/lib/apt/lists/*
+
+FROM base AS byond
+COPY dependencies.sh /tmp/dependencies.sh
+RUN . /tmp/dependencies.sh \
+    && cd /tmp \
+    && curl -fsSL -H "User-Agent: MedStation dev" "http://www.byond.com/download/build/${BYOND_MAJOR}/${BYOND_MAJOR}.${BYOND_MINOR}_byond_linux.zip" -o byond.zip \
+    && unzip -q byond.zip && cd byond \
+    && sed -i 's|install:|&\n\tmkdir -p $(MAN_DIR)/man6|' Makefile \
+    && make install >/dev/null \
+    && rm -rf /tmp/byond /tmp/byond.zip
+
+FROM base AS rust_g
+RUN apt-get update && apt-get install -y --no-install-recommends pkg-config gcc-multilib libssl-dev:i386 \
+    && rm -rf /var/lib/apt/lists/*
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal \
+    && ~/.cargo/bin/rustup target add i686-unknown-linux-gnu
+COPY dependencies.sh /tmp/dependencies.sh
+WORKDIR /rust_g
+RUN . /tmp/dependencies.sh \
+    && git init -q && git remote add origin "https://github.com/${RUST_G_REPO}" \
+    && git fetch -q --depth 1 origin "${RUST_G_VERSION}" && git checkout -q FETCH_HEAD \
+    && PKG_CONFIG_ALLOW_CROSS=1 ~/.cargo/bin/cargo build --release --target i686-unknown-linux-gnu
+
+FROM byond
+COPY --from=rust_g /rust_g/target/i686-unknown-linux-gnu/release/librust_g.so /usr/local/lib/librust_g.so
+ENV PATH="/usr/local/byond/bin:${PATH}" LD_LIBRARY_PATH="/usr/local/byond/bin:/usr/local/lib"
+WORKDIR /tgstation

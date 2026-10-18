@@ -1,0 +1,11 @@
+{
+	"version": 1,
+	"map_name": "MedStation",
+	"map_path": "map_files/debug",
+	"map_file": "medstation.dmm",
+	"space_ruin_levels": 0,
+	"shuttles": {
+		"cargo": "cargo_delta"
+	},
+	"minetype": "none"
+}

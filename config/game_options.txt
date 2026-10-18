@@ -129,7 +129,7 @@ PROTECT_ROLES_FROM_ANTAGONIST
 #ENFORCE_HUMAN_AUTHORITY_ON_EVERYONE
 
 ## If late-joining players have a chance to become a traitor/changeling
-ALLOW_LATEJOIN_ANTAGONISTS
+#ALLOW_LATEJOIN_ANTAGONISTS
 
 ## Uncomment to prevent the nuclear operative leader from getting the war declaration item
 #DISABLE_WAROPS

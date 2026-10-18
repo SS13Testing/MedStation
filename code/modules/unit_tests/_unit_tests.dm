@@ -177,6 +177,7 @@
 #include "mapping.dm"
 #include "mecha_damage.dm"
 #include "medical_wounds.dm"
+#include "medstation.dm"
 #include "merge_type.dm"
 #include "mindbound_actions.dm"
 #include "missing_icons.dm"
