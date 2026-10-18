@@ -27,6 +27,8 @@ GLOBAL_LIST_INIT(hospital_levels, list(
 /// Chance that a patient is allergic to a medicine, and that the chart says so when they are
 #define ALLERGY_CHANCE 30
 #define ALLERGY_KNOWN_CHANCE 85
+/// How long a dead patient's body stays around before the funeral service collects it
+#define BODY_COLLECTION_TIME (8 MINUTES)
 /// Credits for tagging a patient with the right triage colour
 #define TRIAGE_BONUS 50
 /// Credits the medical budget starts the round with
@@ -310,6 +312,7 @@ SUBSYSTEM_DEF(patient_director)
 	else
 		var/obj/structure/bed/medical/emergency/stretcher = new(arrival)
 		stretcher.buckle_mob(patient, force = TRUE)
+		record.stretcher_ref = WEAKREF(stretcher)
 	case.apply(patient)
 	patient.updatehealth()
 
@@ -423,6 +426,8 @@ SUBSYSTEM_DEF(patient_director)
 	var/deadline
 	/// Set once the patient is cured: when to send them home
 	var/discharge_at
+	/// Ambulance patients: the stretcher they arrived on
+	var/datum/weakref/stretcher_ref
 	/// Walk-ins: the chair they are heading for / sitting in
 	var/datum/weakref/chair_ref
 	/// Walk-ins: they leave if still in the waiting room at this time
@@ -485,6 +490,7 @@ SUBSYSTEM_DEF(patient_director)
 		return
 	if(patient.stat == DEAD)
 		director.finish(src, PATIENT_OUTCOME_DIED)
+		addtimer(CALLBACK(GLOBAL_PROC, GLOBAL_PROC_REF(collect_patient_body), WEAKREF(patient)), BODY_COLLECTION_TIME)
 		return
 	if(discharge_at)
 		if(world.time >= discharge_at)
@@ -545,9 +551,21 @@ SUBSYSTEM_DEF(patient_director)
 
 /// Fades the patient out and removes them.
 /datum/patient_record/proc/vanish(mob/living/carbon/human/patient)
+	var/obj/structure/bed/medical/emergency/stretcher = stretcher_ref?.resolve()
+	if(stretcher && patient.buckled == stretcher)
+		QDEL_IN(stretcher, 2 SECONDS) // the ambulance crew take their stretcher back
 	patient.buckled?.unbuckle_mob(patient, force = TRUE)
 	animate(patient, alpha = 0, time = 1 SECONDS)
 	QDEL_IN(patient, 1 SECONDS)
+
+/// The funeral service collects a dead patient's body (unless they have been revived since).
+/proc/collect_patient_body(datum/weakref/body_ref)
+	var/mob/living/carbon/human/body = body_ref?.resolve()
+	if(QDELETED(body) || body.stat != DEAD)
+		return
+	body.visible_message(span_notice("The funeral service collects [body]."))
+	body.buckled?.unbuckle_mob(body, force = TRUE)
+	qdel(body)
 
 // ------------------------------------------------------------------ player / admin interface
 
@@ -601,6 +619,7 @@ ADMIN_VERB(toggle_patient_director, R_ADMIN|R_FUN, FALSE, "Toggle Patient Direct
 #undef WALKIN_SEAT_TIMEOUT
 #undef HOSPITAL_STARTING_FUNDS
 #undef TRIAGE_BONUS
+#undef BODY_COLLECTION_TIME
 #undef ALLERGY_CHANCE
 #undef ALLERGY_KNOWN_CHANCE
 #undef HOSPITAL_START_LEVEL

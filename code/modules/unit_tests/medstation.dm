@@ -87,6 +87,14 @@
 	body.death()
 	doomed.process_record(director)
 	TEST_ASSERT_EQUAL(director.deceased, deceased_before + 1, "death should count as deceased")
+	// the funeral service collects the body, but not someone who has been revived
+	var/datum/patient_record/revived = director.spawn_patient(/datum/patient_case/burns, run_loc_floor_bottom_left, 1)
+	var/mob/living/carbon/human/revived_body = revived.patient_ref.resolve()
+	collect_patient_body(WEAKREF(revived_body))
+	TEST_ASSERT(!QDELETED(revived_body), "a living patient must not be collected")
+	director.active -= revived
+	collect_patient_body(WEAKREF(body))
+	TEST_ASSERT(QDELETED(body), "a dead patient's body should be collected")
 	director.active.Cut()
 
 /// An ambulance run sets up the vehicle and its blockers, and picks cases that can arrive that way.
