@@ -167,6 +167,136 @@
 	director.reputation = old_reputation
 	director.level = old_level
 
+/// The timed flows really work in the real map: the ambulance arrives, unloads on a timer and leaves, a walk-in walks to a
+/// chair and sits down, and a discharged patient takes their stretcher with them.
+/datum/unit_test/medstation_flows
+
+/datum/unit_test/medstation_flows/Run()
+	var/datum/controller/subsystem/patient_director/director = SSpatient_director
+	director.active.Cut()
+
+	// ---- ambulance: drives in, unloads after a few seconds, leaves
+	TEST_ASSERT(director.launch_ambulance(2, 3, 2), "launch_ambulance failed")
+	sleep(7 SECONDS)
+	var/ambulance_patients = 0
+	for(var/datum/patient_record/record as anything in director.active)
+		if(record.arrival_mode != PATIENT_ARRIVE_AMBULANCE)
+			continue
+		ambulance_patients++
+		var/mob/living/carbon/human/patient = record.patient_ref.resolve()
+		TEST_ASSERT_NOTNULL(patient, "an ambulance patient has no body")
+		TEST_ASSERT(istype(patient.buckled, /obj/structure/bed/medical/emergency), "an ambulance patient should be on a stretcher")
+	TEST_ASSERT_EQUAL(ambulance_patients, 2, "the ambulance should have unloaded 2 patients after its timer")
+	var/obj/structure/medstation_ambulance/ambulance
+	for(var/obj/effect/landmark/ambulance_park/park as anything in GLOB.ambulance_park_points)
+		ambulance = locate() in get_turf(park)
+	TEST_ASSERT_NOTNULL(ambulance, "the ambulance should still be in the bay")
+	ambulance.drive_off()
+	sleep(5 SECONDS)
+	TEST_ASSERT(QDELETED(ambulance), "the ambulance should be gone after driving off")
+	TEST_ASSERT(!director.ambulance_present(), "the bay should be empty again")
+
+	// ---- a discharged ambulance patient takes the stretcher away
+	var/datum/patient_record/leaving = director.active[1]
+	var/mob/living/carbon/human/leaving_patient = leaving.patient_ref.resolve()
+	var/obj/structure/bed/medical/emergency/leaving_stretcher = leaving_patient.buckled
+	TEST_ASSERT_NOTNULL(leaving_stretcher, "no stretcher to remove")
+	leaving.discharge(leaving_patient, director)
+	sleep(4 SECONDS)
+	TEST_ASSERT(QDELETED(leaving_stretcher), "the stretcher should leave with a discharged patient")
+	TEST_ASSERT(QDELETED(leaving_patient), "a discharged patient should be gone")
+	director.active.Cut()
+
+	// ---- walk-in: appears at the door, walks to a chair in the waiting room and sits down
+	var/datum/patient_record/walkin = director.spawn_patient(/datum/patient_case/flu, null, 1, PATIENT_ARRIVE_WALKIN)
+	TEST_ASSERT_NOTNULL(walkin, "walk-in spawn failed")
+	var/mob/living/carbon/human/walker = walkin.patient_ref.resolve()
+	TEST_ASSERT_NOTNULL(walkin.chair_ref?.resolve(), "there was no free chair in the waiting room")
+	for(var/i in 1 to 40)
+		sleep(1 SECONDS)
+		walkin.process_record(director)
+		if(walker.buckled)
+			break
+	TEST_ASSERT(walker.buckled, "the walk-in never sat down")
+	TEST_ASSERT(world.time - walkin.arrived_at < 55 SECONDS, "the walk-in should walk to the chair, not get placed on it after the timeout")
+	qdel(walker)
+	director.active.Cut()
+
+/// The field response plumbing: the ambulance shuttle exists, every scene variant loads, and the shuttle can dock at the
+/// scene and come home again.
+/datum/unit_test/medstation_field
+
+/datum/unit_test/medstation_field/Run()
+	var/obj/docking_port/mobile/ambulance = SSshuttle.getShuttle("ambulance")
+	TEST_ASSERT_NOTNULL(ambulance, "the ambulance shuttle was not loaded")
+	var/obj/docking_port/stationary/home = SSshuttle.getDock("ambulance_home")
+	TEST_ASSERT_NOTNULL(home, "the map has no ambulance_home dock")
+	TEST_ASSERT_EQUAL(ambulance.get_docked(), home, "the ambulance should start docked at the hospital")
+	TEST_ASSERT(length(subtypesof(/datum/medstation_scene)), "no field scenes are defined")
+	for(var/scene_type in subtypesof(/datum/medstation_scene))
+		var/datum/medstation_scene/definition = new scene_type()
+		for(var/variant in 1 to definition.variants)
+			var/where = "[definition.name] variant [variant]"
+			var/datum/field_scene/scene = new(definition)
+			TEST_ASSERT(scene.load(variant), "[where] failed to load")
+			TEST_ASSERT_NOTNULL(scene.dock, "[where] has no dock")
+			TEST_ASSERT_EQUAL(scene.dock.shuttle_id, "ambulance_scene", "[where]: the scene dock should keep its id")
+			TEST_ASSERT(length(scene.patient_spots) >= 3, "[where] has fewer than 3 patient spots")
+			TEST_ASSERT_EQUAL(ambulance.canDock(scene.dock), SHUTTLE_CAN_DOCK, "the ambulance can't dock at [where]")
+			TEST_ASSERT_EQUAL(SSshuttle.moveShuttle("ambulance", "ambulance_scene", FALSE), DOCKING_SUCCESS, "the ambulance couldn't get to [where]")
+			TEST_ASSERT_EQUAL(ambulance.get_docked(), scene.dock, "the ambulance should be docked at [where]")
+			TEST_ASSERT_EQUAL(SSshuttle.moveShuttle("ambulance", "ambulance_home", FALSE), DOCKING_SUCCESS, "the ambulance couldn't come home from [where]")
+			TEST_ASSERT_EQUAL(ambulance.get_docked(), home, "the ambulance should be home again after [where]")
+			var/obj/docking_port/stationary/old_dock = scene.dock
+			qdel(scene)
+			TEST_ASSERT(!(old_dock in SSshuttle.stationary_docking_ports), "the dock of [where] was left registered after unloading")
+			sleep(1 SECONDS)
+
+/// Ambulance calls: they go on the board, expire into lost reputation, and answering one brings the patients back already
+/// closer to their deadline.
+/datum/unit_test/medstation_calls
+
+/datum/unit_test/medstation_calls/Run()
+	var/datum/controller/subsystem/patient_director/director = SSpatient_director
+	director.active.Cut()
+	director.pending_calls.Cut()
+	director.ambulance_away_until = 0
+
+	// a call that nobody answers is lost
+	var/datum/ambulance_call/stale = director.post_call(2, 3, list(/datum/patient_case/burns))
+	TEST_ASSERT_NOTNULL(stale, "post_call returned no call")
+	TEST_ASSERT(stale in director.pending_calls, "the call should be on the board")
+	var/missed_before = director.missed_calls
+	var/reputation_before = director.reputation
+	stale.expires_at = world.time
+	director.expire_calls()
+	TEST_ASSERT(!(stale in director.pending_calls), "an expired call should leave the board")
+	TEST_ASSERT_EQUAL(director.missed_calls, missed_before + 1, "an expired call should count as missed")
+	TEST_ASSERT(director.reputation < reputation_before, "a missed call should cost reputation")
+
+	// answering a call: the ambulance goes away, then comes back with the patients, whose clocks have been running
+	var/mob/living/carbon/human/dispatcher = allocate(/mob/living/carbon/human/consistent)
+	var/datum/ambulance_call/answered = director.post_call(2, 3, list(/datum/patient_case/burns, /datum/patient_case/respiratory))
+	answered.travel_time = 3 SECONDS
+	answered.posted_at = world.time - 2 MINUTES // it has been waiting two minutes already
+	TEST_ASSERT(director.dispatch_call(answered, dispatcher), "dispatch_call should send the ambulance")
+	TEST_ASSERT(!(answered in director.pending_calls), "an answered call should leave the board")
+	TEST_ASSERT(director.ambulance_busy(), "the ambulance should be busy while out")
+	TEST_ASSERT(!director.dispatch_call(answered, dispatcher), "a call can't be answered twice")
+	sleep(9 SECONDS) // 3s away + 4s to unload + slack
+	var/found = 0
+	for(var/datum/patient_record/record as anything in director.active)
+		if(record.arrival_mode != PATIENT_ARRIVE_AMBULANCE)
+			continue
+		found++
+		// burns normally allow 8 minutes (respiratory 5): after two minutes of waiting they must be less than that
+		TEST_ASSERT(record.deadline - world.time < record.case.get_deadline() - 90 SECONDS, "the patients' clocks should have been running since the call came in")
+	TEST_ASSERT_EQUAL(found, 2, "the ambulance should have brought both patients")
+	for(var/obj/structure/medstation_ambulance/ambulance in world)
+		qdel(ambulance)
+	director.active.Cut()
+	director.ambulance_away_until = 0
+
 /// The welcome guide exists and covers the main points.
 /datum/unit_test/medstation_guide
 
@@ -250,6 +380,9 @@
 TEST_FOCUS(/datum/unit_test/patient_cases)
 TEST_FOCUS(/datum/unit_test/patient_director)
 TEST_FOCUS(/datum/unit_test/medstation_ambulance)
+TEST_FOCUS(/datum/unit_test/medstation_flows)
+TEST_FOCUS(/datum/unit_test/medstation_field)
+TEST_FOCUS(/datum/unit_test/medstation_calls)
 TEST_FOCUS(/datum/unit_test/medstation_library)
 TEST_FOCUS(/datum/unit_test/medstation_guide)
 TEST_FOCUS(/datum/unit_test/medstation_levels)

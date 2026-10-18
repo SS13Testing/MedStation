@@ -29,6 +29,11 @@ GLOBAL_LIST_INIT(hospital_levels, list(
 #define ALLERGY_KNOWN_CHANCE 85
 /// How long a dead patient's body stays around before the funeral service collects it
 #define BODY_COLLECTION_TIME (8 MINUTES)
+/// Ambulance calls: how many can wait at once, how long they wait for an answer, how far away patients are
+#define MAX_PENDING_CALLS 2
+#define CALL_WAIT_TIME (4 MINUTES)
+#define CALL_TRAVEL_MIN (40 SECONDS)
+#define CALL_TRAVEL_MAX (90 SECONDS)
 /// Credits for tagging a patient with the right triage colour
 #define TRIAGE_BONUS 50
 /// Credits the medical budget starts the round with
@@ -84,6 +89,14 @@ SUBSYSTEM_DEF(patient_director)
 	var/rush_until = 0
 	/// Index into GLOB.hospital_levels. Moves with reputation.
 	var/level = HOSPITAL_START_LEVEL
+	/// The field scene being answered right now (the ambulance is on its way there, at it, or coming back), if any
+	var/datum/field_scene/active_scene
+	/// Ambulance calls waiting for somebody to answer them (/datum/ambulance_call)
+	var/list/datum/ambulance_call/pending_calls = list()
+	/// While this is in the future the ambulance is out on a call
+	var/ambulance_away_until = 0
+	/// Ambulance calls nobody answered in time
+	var/missed_calls = 0
 	/// Case types the staff have seen at least once, for the case library
 	var/list/discovered = list()
 	/// Per case name: list("treated" = n, "died" = n, "left" = n), for the shift report
@@ -112,6 +125,7 @@ SUBSYSTEM_DEF(patient_director)
 		SSeconomy.get_dep_account(ACCOUNT_MED)?.adjust_money(HOSPITAL_STARTING_FUNDS, "Hospital opening grant")
 	for(var/datum/patient_record/record as anything in active.Copy())
 		record.process_record(src)
+	expire_calls()
 	if(!enabled)
 		return
 	if(isnull(next_event_time))
@@ -128,8 +142,8 @@ SUBSYSTEM_DEF(patient_director)
 	if(!staff || room <= 0)
 		return
 	var/arrived = FALSE
-	if(room >= 1 && !ambulance_present() && prob(PATIENT_AMBULANCE_CHANCE))
-		arrived = launch_ambulance(staff, room)
+	if(room >= 1 && !ambulance_busy() && length(pending_calls) < MAX_PENDING_CALLS && prob(PATIENT_AMBULANCE_CHANCE))
+		arrived = paramedic_on_duty() ? post_call(staff, room) : launch_ambulance(staff, room)
 	if(!arrived)
 		arrived = !!spawn_patient(staff = staff, arrival_mode = PATIENT_ARRIVE_WALKIN)
 	next_patient_time = world.time + (arrived ? patient_interval(staff) : 15 SECONDS)
@@ -239,7 +253,7 @@ SUBSYSTEM_DEF(patient_director)
 			. += point_turf
 
 /// Sends an ambulance to the bay with 1-3 patients. Returns FALSE if there was no free parking or unloading space.
-/datum/controller/subsystem/patient_director/proc/launch_ambulance(staff, room = 3, count)
+/datum/controller/subsystem/patient_director/proc/launch_ambulance(staff, room = 3, count, list/case_types, datum/ambulance_call/emergency)
 	var/list/parks = list()
 	for(var/obj/effect/landmark/ambulance_park/park as anything in GLOB.ambulance_park_points)
 		parks += get_turf(park)
@@ -253,10 +267,10 @@ SUBSYSTEM_DEF(patient_director)
 	var/obj/structure/medstation_ambulance/ambulance = new(pick(parks))
 	ambulance.drive_in()
 	dispatch("An ambulance is pulling into the bay with [count] patient[count > 1 ? "s" : ""].")
-	addtimer(CALLBACK(src, PROC_REF(unload_ambulance), ambulance, count, staff), 4 SECONDS)
+	addtimer(CALLBACK(src, PROC_REF(unload_ambulance), ambulance, count, staff, case_types, emergency), 4 SECONDS)
 	return TRUE
 
-/datum/controller/subsystem/patient_director/proc/unload_ambulance(obj/structure/medstation_ambulance/ambulance, count, staff)
+/datum/controller/subsystem/patient_director/proc/unload_ambulance(obj/structure/medstation_ambulance/ambulance, count, staff, list/case_types, datum/ambulance_call/emergency)
 	if(QDELETED(ambulance))
 		return
 	ambulance.visible_message(span_notice("The rear doors of [ambulance] swing open."))
@@ -264,8 +278,80 @@ SUBSYSTEM_DEF(patient_director)
 		var/list/free = free_offload_turfs()
 		if(!length(free))
 			break
-		spawn_patient(null, pick(free), staff, PATIENT_ARRIVE_AMBULANCE)
+		var/datum/patient_record/record = spawn_patient(length(case_types) >= i ? case_types[i] : null, pick(free), staff, PATIENT_ARRIVE_AMBULANCE)
+		if(record && emergency) // the clock started when the call came in
+			record.deadline = max(world.time + 30 SECONDS, record.deadline - (world.time - emergency.posted_at))
 	addtimer(CALLBACK(ambulance, TYPE_PROC_REF(/obj/structure/medstation_ambulance, drive_off)), AMBULANCE_STAY_TIME)
+
+// ------------------------------------------------------------------ ambulance calls
+
+/// The docking port of the scene being answered, if there is one.
+/datum/controller/subsystem/patient_director/proc/get_scene_dock()
+	return active_scene?.dock
+
+/// Is the ambulance parked in the bay or out on a call?
+/datum/controller/subsystem/patient_director/proc/ambulance_busy()
+	return ambulance_present() || world.time < ambulance_away_until
+
+/// A living paramedic is on duty, so ambulance arrivals become calls somebody has to answer.
+/datum/controller/subsystem/patient_director/proc/paramedic_on_duty()
+	for(var/mob/living/staff_member as anything in get_staff())
+		if(staff_member.mind?.assigned_role?.title == JOB_PARAMEDIC)
+			return TRUE
+	return FALSE
+
+/datum/controller/subsystem/patient_director/proc/ambulance_status()
+	if(ambulance_present())
+		return "The ambulance is in the bay."
+	if(world.time < ambulance_away_until)
+		return "The ambulance is out on a call, back in about [max(0, round((ambulance_away_until - world.time) / (1 SECONDS)))] seconds."
+	return "The ambulance is free."
+
+/// Puts a call on the board: 1-3 patients somewhere on the station waiting for the ambulance.
+/datum/controller/subsystem/patient_director/proc/post_call(staff, room = 3, list/case_types)
+	if(!length(case_types))
+		var/count = 1
+		if(staff >= 2)
+			count += rand(0, min(2, staff - 1))
+		count = clamp(count, 1, max(1, min(room, 3)))
+		case_types = list()
+		for(var/i in 1 to count)
+			case_types += pick_case(staff, PATIENT_ARRIVE_AMBULANCE)
+	var/static/list/locations = list(
+		"a transit ring corridor", "the hydroponics deck", "the cargo hangar", "a crew quarters block",
+		"the observation deck", "the engineering annex", "the docking arm", "the promenade",
+	)
+	var/datum/ambulance_call/emergency = new(pick(locations), case_types, CALL_WAIT_TIME, rand(CALL_TRAVEL_MIN, CALL_TRAVEL_MAX))
+	pending_calls += emergency
+	dispatch("<b>AMBULANCE CALL</b>: [emergency.label()]. Answer it from the dispatch console.")
+	return emergency
+
+/// Calls nobody answered in time are lost.
+/datum/controller/subsystem/patient_director/proc/expire_calls()
+	for(var/datum/ambulance_call/emergency as anything in pending_calls.Copy())
+		if(world.time < emergency.expires_at)
+			continue
+		pending_calls -= emergency
+		missed_calls++
+		reputation -= emergency.urgency()
+		dispatch("The call at [emergency.location] went unanswered. The patients were taken elsewhere. Reputation falls.")
+		update_level()
+
+/// Sends the ambulance to a call. The patients come back on it after the travel time. Returns FALSE if it can't go.
+/datum/controller/subsystem/patient_director/proc/dispatch_call(datum/ambulance_call/emergency, mob/user)
+	if(!(emergency in pending_calls) || ambulance_busy())
+		return FALSE
+	pending_calls -= emergency
+	ambulance_away_until = world.time + emergency.travel_time + 20 SECONDS
+	dispatch("[user ? "[user.real_name] has sent" : "The staff have sent"] the ambulance to [emergency.location]. It will be back in about [round(emergency.travel_time / (1 SECONDS))] seconds.")
+	addtimer(CALLBACK(src, PROC_REF(ambulance_returns), emergency), emergency.travel_time)
+	return TRUE
+
+/datum/controller/subsystem/patient_director/proc/ambulance_returns(datum/ambulance_call/emergency)
+	var/staff = max(1, count_staff())
+	if(!launch_ambulance(staff, length(emergency.case_types), length(emergency.case_types), emergency.case_types, emergency))
+		// no space in the bay right now: try again shortly
+		addtimer(CALLBACK(src, PROC_REF(ambulance_returns), emergency), 10 SECONDS)
 
 // ------------------------------------------------------------------ patients
 
@@ -384,6 +470,7 @@ SUBSYSTEM_DEF(patient_director)
 	var/list/parts = list("<div class='panel stationborder'><span class='header'>Hospital shift report</span><br>")
 	parts += "Final rating: <b>[level_name()]</b> (reputation [reputation])<br>"
 	parts += "Patients treated: <b>[treated]</b> | lost: <b>[deceased]</b> | left without being seen: <b>[walked_out]</b><br>"
+	parts += "Ambulance calls missed: <b>[missed_calls]</b><br>"
 	parts += "Allergic reactions to treatment: <b>[allergic_reactions]</b><br>"
 	parts += "Medical budget at close: <b>[SSeconomy.get_dep_account(ACCOUNT_MED)?.account_balance || 0]</b> credits<br>"
 	if(length(case_stats))
@@ -408,8 +495,8 @@ SUBSYSTEM_DEF(patient_director)
 /datum/controller/subsystem/patient_director/proc/get_status_text()
 	var/list/lines = list("<b>Hospital status</b>")
 	lines += "Rating: [level_name()] (reputation [reputation])"
-	lines += "Patients in the hospital: [length(active)]"
-	lines += "Treated: [treated] | Lost: [deceased] | Left unseen: [walked_out] | Allergic reactions: [allergic_reactions] | Reputation: [reputation]"
+	lines += "Patients in the hospital: [length(active)] | Ambulance calls waiting: [length(pending_calls)] | [ambulance_status()]"
+	lines += "Treated: [treated] | Lost: [deceased] | Left unseen: [walked_out] | Missed calls: [missed_calls] | Allergic reactions: [allergic_reactions] | Reputation: [reputation]"
 	lines += "Medical budget: [SSeconomy.get_dep_account(ACCOUNT_MED)?.account_balance || 0] credits"
 	for(var/datum/patient_record/record as anything in active)
 		lines += "- [record.patient_name] ([record.arrival_mode]): [record.triage_label()][isnull(record.tag_level) ? "" : " | tagged [triage_level_name(record.tag_level)]"]"
@@ -619,6 +706,10 @@ ADMIN_VERB(toggle_patient_director, R_ADMIN|R_FUN, FALSE, "Toggle Patient Direct
 #undef WALKIN_SEAT_TIMEOUT
 #undef HOSPITAL_STARTING_FUNDS
 #undef TRIAGE_BONUS
+#undef MAX_PENDING_CALLS
+#undef CALL_WAIT_TIME
+#undef CALL_TRAVEL_MIN
+#undef CALL_TRAVEL_MAX
 #undef BODY_COLLECTION_TIME
 #undef ALLERGY_CHANCE
 #undef ALLERGY_KNOWN_CHANCE

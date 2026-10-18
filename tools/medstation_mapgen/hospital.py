@@ -329,12 +329,14 @@ def furnish(g):
 	# The ambulance (3x3, facing east) parks centred on the landmark; patients are wheeled off its rear (west side).
 	x1, y1, x2, y2 = g.ix("bay")
 	g.put(36, 36, "/obj/effect/landmark/ambulance_park")
+	g.put(25, 39, "/obj/docking_port/stationary/ambulance_home")  # the real ambulance shuttle docks here (7x5 block, airlock on top)
 	for y in (35, 36, 37):
 		g.put(34, y, "/obj/effect/landmark/patient_spawn")
 	g.put(x2 - 2, y1 + 6, "/obj/effect/landmark/supply_drop")
 	g.put(x2, y1, "/obj/structure/closet/emcloset")
 	g.put(x2, y1 + 2, "/obj/structure/closet/firecloset")
 	g.put(x1, y2, "/obj/machinery/vending/wallmed")
+	g.put(x1 + 5, y2, "/obj/machinery/computer/ambulance_dispatch")
 	for i in range(4):
 		g.put(x1 + 14 + i * 2, y2, bed)               # parked stretchers
 	for x in (x1 + 2, x1 + 4):
@@ -352,6 +354,7 @@ def furnish(g):
 	for i in range(2):
 		g.put(x1 + 5 + i * 4, y1 + 7, "/obj/effect/landmark/start")
 	g.put(x1 + 8, y2, "/obj/machinery/computer/hospital_terminal")
+	g.put(x1 + 10, y2, "/obj/machinery/computer/ambulance_dispatch")
 	g.put(x1 + 1, y2, "/obj/machinery/coffeemaker")
 	g.put(x1 + 3, y2, "/obj/machinery/microwave")
 	g.put(x2, y2, "/obj/machinery/vending/coffee")

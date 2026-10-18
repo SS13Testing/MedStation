@@ -1,0 +1,124 @@
+//MAP CONVERTED BY dmm2tgm.py THIS HEADER COMMENT PREVENTS RECONVERSION, DO NOT REMOVE
+"aa" = (
+/turf/closed/wall/mineral/titanium,
+/area/shuttle/ambulance)
+"ab" = (
+/obj/effect/spawner/structure/window/reinforced/shuttle,
+/turf/open/floor/plating,
+/area/shuttle/ambulance)
+"ac" = (
+/obj/structure/table,
+/obj/item/storage/medkit/regular,
+/turf/open/floor/mineral/titanium/blue,
+/area/shuttle/ambulance)
+"ad" = (
+/turf/open/floor/mineral/titanium,
+/area/shuttle/ambulance)
+"ae" = (
+/obj/machinery/light/directional/west,
+/turf/open/floor/mineral/titanium,
+/area/shuttle/ambulance)
+"af" = (
+/obj/structure/chair/comfy/shuttle{
+	dir = 1
+	},
+/turf/open/floor/mineral/titanium/blue,
+/area/shuttle/ambulance)
+"ag" = (
+/obj/structure/closet/crate/medical,
+/obj/structure/bed/medical/emergency,
+/turf/open/floor/mineral/titanium/blue,
+/area/shuttle/ambulance)
+"ah" = (
+/obj/machinery/computer/ambulance_shuttle,
+/turf/open/floor/mineral/titanium/blue,
+/area/shuttle/ambulance)
+"ai" = (
+/obj/structure/chair/comfy/shuttle{
+	dir = 1
+	},
+/turf/open/floor/mineral/titanium,
+/area/shuttle/ambulance)
+"aj" = (
+/obj/machinery/power/shuttle_engine/heater,
+/obj/structure/window/reinforced/spawner/directional/north{
+	layer = 2.9
+	},
+/obj/structure/window/reinforced/spawner/directional/west,
+/obj/structure/window/reinforced/spawner/directional/east,
+/turf/open/floor/plating,
+/area/shuttle/ambulance)
+"ak" = (
+/obj/machinery/power/shuttle_engine/propulsion/burst,
+/turf/open/floor/plating/airless,
+/area/shuttle/ambulance)
+"al" = (
+/obj/structure/table,
+/obj/item/healthanalyzer,
+/turf/open/floor/mineral/titanium/blue,
+/area/shuttle/ambulance)
+"am" = (
+/obj/structure/bed/medical/emergency,
+/turf/open/floor/mineral/titanium/blue,
+/area/shuttle/ambulance)
+"an" = (
+/obj/machinery/door/airlock/titanium{
+	name = "Ambulance Rear Doors"
+	},
+/obj/docking_port/mobile{
+	callTime = 150;
+	dir = 8;
+	ignitionTime = 40;
+	name = "ambulance";
+	port_direction = 4;
+	shuttle_id = "ambulance"
+	},
+/obj/structure/fans/tiny,
+/turf/open/floor/plating,
+/area/shuttle/ambulance)
+
+(1,1,1) = {"
+aa
+aa
+ab
+aa
+ab
+aa
+aa
+"}
+(2,1,1) = {"
+aa
+ac
+ad
+ae
+af
+ag
+aa
+"}
+(3,1,1) = {"
+ab
+ah
+ai
+ad
+af
+aj
+ak
+"}
+(4,1,1) = {"
+aa
+al
+ad
+ad
+af
+am
+aa
+"}
+(5,1,1) = {"
+aa
+aa
+ab
+an
+ab
+aa
+aa
+"}
