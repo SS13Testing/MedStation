@@ -118,10 +118,27 @@ don't commit those.
 - Ambulance sprite: cut from the cars sheet in https://github.com/Monkestation/crimson-grid, see
   `monkestation/code/modules/medstation/icons/README.md`.
 
-## Ideas queue (from research on Baystation12, ColonialMarines, Goonstation)
+## To do
 
+Order matters: the core loop at the main hospital comes first.
+
+**1. Core hospital loop (now)**
+- ~~Audit the starting stock against every case~~ (done): each case lists what it `needs`, and the `medstation_treatability`
+  test fails if the hospital can't provide it from the start (stock, vending machines, or chemistry from the dispensers;
+  only spare organs may be bought). The audit found and fixed: no defibrillator, empty blood freezers, no containers in the
+  pharmacy, missing drapes/bonesetter/stethoscope. New cases must declare `needs`.
+- Check the solo experience: pacing of the first patients, how many a single doctor can handle, what a new player is told.
+- Furnish the sparse rooms (isolation lab, pharmacy, lockers) and make the isolation lab matter for infectious patients.
+- Tune payouts, prices and tier thresholds so the budget and the tiers feel earned.
+
+**2. Field response**
+- **Scene hazards**: spreading fire, gas leaks, live wires, collapses and unstable structures that threaten the crew as well
+  as the patients, with matching gear in the ambulance (firesuit, internals, a crowbar). Themed per scene.
+- A drivable ambulance (manual driving instead of the console), and use the crimson-grid ambulance sprite for it.
+- More scene themes (ice/outdoor, space-side, hostile wildlife) and bystanders.
+
+**3. Medical depth (from research on Baystation12, ColonialMarines, Goonstation)**
 Reimplement from the ideas, don't copy Goonstation code (its licence is non-commercial share-alike).
-
 1. Chemical-effect flags (painkiller, stabiliser, antibiotic...) and staged overdoses with side effects.
 2. Pain and shock stages, so untreated injuries visibly collapse a patient.
 3. Pulse and circulation (hypovolemia, arterial bleeding, arrest, CPR).
@@ -130,4 +147,8 @@ Reimplement from the ideas, don't copy Goonstation code (its licence is non-comm
 6. A surgeon error model (sedation, skill).
 7. Organ scarring after repair, germ levels and post-op infection.
 8. Splints and bone jostling when moving a fracture.
-9. A drivable ambulance for field calls.
+
+**4. Later**
+- Persistence between shifts (reputation, unlocked tier), hospital upgrades bought with the budget.
+- Power and atmospherics as a feature (blackout events), instead of the unpowered hospital areas.
+- A purpose-built hospital map instead of the Runtime Station chassis.

@@ -363,6 +363,99 @@
 	director.active.Cut()
 	director.ambulance_away_until = 0
 
+/// Everything a case needs to be treated (/datum/patient_case/needs) must be obtainable from the start: in the medical areas
+/// (nested contents included), in a vending machine, or (for medicines) makeable by chemistry from what the dispensers hold.
+/// Only spare organs may rely on the terminal's order list. Keeps the core loop playable: no case may need something the
+/// hospital doesn't have.
+/datum/unit_test/medstation_treatability
+	/// Item and machine types in the medical areas (nested contents included), by type
+	var/list/stocked = list()
+	/// Reagents sitting in containers in the medical areas
+	var/list/stocked_reagents = list()
+	var/list/dispensable = list()
+	var/list/craftable_memo = list()
+	/// Item types the terminal sells. Only organs may be bought: everything else has to be there from the start.
+	var/list/orderable = list()
+
+/datum/unit_test/medstation_treatability/proc/collect_stock()
+	for(var/atom/movable/thing in world)
+		var/turf/where = get_turf(thing)
+		if(!where || !istype(get_area(where), /area/station/medical))
+			continue
+		if(!isitem(thing) && !ismachinery(thing) && !isstructure(thing))
+			continue
+		stocked[thing.type] = TRUE
+		if(thing.reagents)
+			for(var/datum/reagent/reagent as anything in thing.reagents.reagent_list)
+				stocked_reagents[reagent.type] = TRUE
+		if(istype(thing, /obj/machinery/vending))
+			var/obj/machinery/vending/vendor = thing
+			for(var/datum/data/vending_product/record as anything in vendor.product_records)
+				stocked[record.product_path] = TRUE
+	for(var/obj/machinery/chem_dispenser/dispenser in world)
+		for(var/reagent_type in dispenser.dispensable_reagents)
+			dispensable[reagent_type] = TRUE
+	for(var/supply_name in GLOB.hospital_supplies)
+		var/datum/hospital_supply/supply = GLOB.hospital_supplies[supply_name]
+		for(var/item_type in supply.contents_list)
+			orderable[item_type] = TRUE
+
+/// Can chemistry make this reagent from dispensable reagents (recursively)?
+/datum/unit_test/medstation_treatability/proc/can_make(reagent_type, depth = 0)
+	if(dispensable[reagent_type])
+		return TRUE
+	if(depth > 6)
+		return FALSE
+	var/key = "[reagent_type]"
+	if(!isnull(craftable_memo[key]))
+		return craftable_memo[key]
+	craftable_memo[key] = FALSE // guards against cycles
+	for(var/datum/chemical_reaction/reaction as anything in GLOB.chemical_reactions_list_product_index[reagent_type])
+		var/ok = TRUE
+		for(var/needed in reaction.required_reagents)
+			if(!can_make(needed, depth + 1))
+				ok = FALSE
+				break
+		if(ok)
+			for(var/catalyst in reaction.required_catalysts)
+				if(!can_make(catalyst, depth + 1))
+					ok = FALSE
+					break
+		if(ok)
+			craftable_memo[key] = TRUE
+			return TRUE
+	return FALSE
+
+/datum/unit_test/medstation_treatability/proc/obtainable(wanted)
+	if(ispath(wanted, /datum/reagent))
+		if(stocked_reagents[wanted])
+			return TRUE
+		for(var/stocked_reagent in stocked_reagents)
+			if(ispath(stocked_reagent, wanted))
+				return TRUE
+		return can_make(wanted)
+	for(var/stocked_type in stocked)
+		if(ispath(stocked_type, wanted))
+			return TRUE
+	if(ispath(wanted, /obj/item/organ)) // spare organs are a purchase, not a starting supply
+		for(var/orderable_type in orderable)
+			if(ispath(orderable_type, wanted))
+				return TRUE
+	return FALSE
+
+/datum/unit_test/medstation_treatability/Run()
+	collect_stock()
+	for(var/case_type in subtypesof(/datum/patient_case))
+		var/datum/patient_case/case = new case_type()
+		TEST_ASSERT(length(case.needs), "[case_type] doesn't say what it needs to be treated")
+		for(var/list/group as anything in case.needs)
+			var/found = FALSE
+			for(var/wanted in group)
+				if(obtainable(wanted))
+					found = TRUE
+					break
+			TEST_ASSERT(found, "[case_type] needs one of [json_encode(group)] but the hospital can't provide any of them")
+
 /// The welcome guide exists and covers the main points.
 /datum/unit_test/medstation_guide
 
@@ -448,6 +541,7 @@ TEST_FOCUS(/datum/unit_test/patient_director)
 TEST_FOCUS(/datum/unit_test/medstation_ambulance)
 TEST_FOCUS(/datum/unit_test/medstation_flows)
 TEST_FOCUS(/datum/unit_test/medstation_field)
+TEST_FOCUS(/datum/unit_test/medstation_treatability)
 TEST_FOCUS(/datum/unit_test/medstation_scene_calls)
 TEST_FOCUS(/datum/unit_test/medstation_calls)
 TEST_FOCUS(/datum/unit_test/medstation_library)
