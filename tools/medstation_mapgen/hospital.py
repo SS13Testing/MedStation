@@ -193,6 +193,15 @@ def row(g, x1, x2, y, *objs):
 		g.put(x, y, *objs)
 
 
+def cubicle(g, key, x, y, door_dx, wall_dy, toilet_dir):
+	"""A one-tile toilet cubicle in the corner of a room: the interior tile (x, y) is bounded by the room's own walls on two
+	sides, a new wall (x, y + wall_dy) on the third and a door at (x + door_dx, y)."""
+	area = g.rooms[key][4]
+	g.wall(x, y + wall_dy)
+	g.door(x + door_dx, y, area, glass=False)
+	g.put(x, y, atom("/obj/structure/toilet", dir=toilet_dir))
+
+
 def furnish(g):
 	bed = "/obj/structure/bed/medical/anchored"
 	chair = "/obj/structure/chair"
@@ -204,9 +213,13 @@ def furnish(g):
 	for x in range(x1 + 1, x2, 2):
 		g.put(x, y1 + 2, atom(chair, dir=1))
 		g.put(x, y1 + 6, atom(chair, dir=2))
-	g.put(x1 + 1, y2, "/obj/machinery/vending/coffee")
-	g.put(x1 + 2, y2, "/obj/machinery/vending/snack")
+	g.put(x1 + 3, y2, "/obj/machinery/vending/coffee")
+	g.put(x1 + 4, y2, "/obj/machinery/vending/snack")
 	g.put(x2, y2, "/obj/machinery/medical_kiosk")
+	cubicle(g, "lobby", x1, y2, 1, -1, 4)       # restroom, north-west corner
+	cubicle(g, "lobby", x1, y1, 1, 1, 4)        # restroom, south-west corner
+	g.put(x1 + 3, y1, "/obj/structure/sink")
+	g.put(x1 + 6, y2 - 1, "/obj/structure/sink")
 	g.put((x1 + x2) // 2, y2, "/obj/effect/landmark/observer_start")
 	g.put(x2, y1 + 4, "/obj/structure/filingcabinet")
 
@@ -236,6 +249,8 @@ def furnish(g):
 		g.put(x, y1 + 1, bed)
 		g.put(x, y1 + 3, "/obj/machinery/iv_drip")
 	g.put(x1, y2, "/obj/machinery/vending/medical")
+	cubicle(g, "er", x1, y1, 1, 1, 4)
+	g.put(x1 + 3, y1, "/obj/structure/sink")
 	g.put(x2, y2, "/obj/structure/closet/crate/freezer", "/obj/item/reagent_containers/blood/o_minus", "/obj/item/reagent_containers/blood/o_minus", "/obj/item/reagent_containers/blood/o_minus", "/obj/item/reagent_containers/blood/o_plus", "/obj/item/reagent_containers/blood/o_plus", "/obj/item/reagent_containers/blood/a_plus", "/obj/item/reagent_containers/blood/b_plus")  # starting blood stock
 	g.put(x2, y2 - 1, "/obj/machinery/defibrillator_mount")
 	g.put(x1 + 9, y1 + 6, "/obj/structure/table/reinforced", "/obj/item/defibrillator/loaded")
@@ -255,6 +270,7 @@ def furnish(g):
 		g.put(x + 1 if x + 1 < x2 else x, y1 + 2, "/obj/machinery/iv_drip")
 	g.put(x2, y2, "/obj/structure/closet/secure_closet/medical1")
 	g.put(x1, y2, "/obj/machinery/vending/wallmed")
+	g.put(x1 + 1, y2, "/obj/structure/sink")
 
 	# ------------------------------------------------ diagnostics
 	x1, y1, x2, y2 = g.ix("diag")
@@ -342,7 +358,7 @@ def furnish(g):
 		g.put(x1 + 3, y, bed)
 		g.put(x1 + 2, y, "/obj/machinery/iv_drip")
 	g.put(x1, y1 + 4, "/obj/structure/sink")
-	g.put(x1, y1 + 7, "/obj/structure/sink")
+	g.put(x1, y1 + 7, "/obj/machinery/shower/directional/west")
 	g.put(x2, y1 + 1, "/obj/structure/closet/l3closet")
 	g.put(x1, y1 + 1, "/obj/structure/closet/l3closet")
 
@@ -358,6 +374,8 @@ def furnish(g):
 	g.put(x2, y1 + 2, "/obj/structure/closet/firecloset")
 	g.put(x1, y2, "/obj/machinery/vending/wallmed")
 	g.put(x1 + 5, y2, "/obj/machinery/computer/ambulance_dispatch")
+	for dx in (8, 10):  # decontamination showers by the ER doors: wheel chemical patients under them
+		g.put(x1 + dx, y2, "/obj/machinery/shower/directional/north")
 	for i in range(4):
 		g.put(x1 + 14 + i * 2, y2, bed)               # parked stretchers
 	for x in (x1 + 2, x1 + 4):
@@ -365,8 +383,8 @@ def furnish(g):
 
 	# ------------------------------------------------ staff lounge (job spawns)
 	x1, y1, x2, y2 = g.ix("lounge")
-	jobs = ["medical_doctor", "medical_doctor", "medical_doctor", "paramedic", "paramedic", "chemist",
-		"virologist", "psychologist", "geneticist", "chief_medical_officer"]
+	jobs = ["nurse", "nurse", "nurse", "nurse", "basic_emt", "basic_emt", "basic_emt", "medical_doctor", "medical_doctor",
+		"paramedic", "paramedic", "chemist", "virologist", "psychologist", "geneticist", "chief_medical_officer"]
 	px, py = x1 + 1, y1 + 1
 	for i, j in enumerate(jobs):
 		g.put(x1 + 1 + (i % 6) * 2, y1 + 1 + (i // 6) * 2, "/obj/effect/landmark/start/" + j)
@@ -392,12 +410,17 @@ def furnish(g):
 	g.put(x2, y2, "/obj/machinery/vending/coffee")
 	g.put(x1, y2, "/obj/structure/closet/emcloset")
 
-	# ------------------------------------------------ locker room
+	# ------------------------------------------------ locker room (and staff restroom)
 	x1, y1, x2, y2 = g.ix("locker")
-	for y in range(y1, y2 + 1, 2):
+	for y in range(y1, y2, 2):
 		g.put(x1, y, "/obj/structure/closet/wardrobe/white")
+	for y in range(y1 + 2, y2 - 2, 2):
 		g.put(x2, y, "/obj/structure/closet/secure_closet/medical1")
-	g.put(x1 + 3, y2, "/obj/machinery/washing_machine")
+	cubicle(g, "locker", x2, y2, -1, -1, 8)       # north-east corner
+	cubicle(g, "locker", x2, y1, -1, 1, 8)        # south-east corner
+	g.put(x1, y2, "/obj/structure/sink")
+	g.put(x1 + 1, y2, "/obj/machinery/shower/directional/north")
+	g.put(x1 + 2, y2, "/obj/machinery/washing_machine")
 
 
 if __name__ == "__main__":

@@ -15,3 +15,10 @@
 #define TRIAGE_GREEN 1
 #define TRIAGE_YELLOW 2
 #define TRIAGE_RED 3
+
+/// Career ladder jobs (see career_jobs.dm) and the "your rank is too low" job error
+#define JOB_NURSE "Nurse"
+#define JOB_BASIC_EMT "Basic EMT"
+#define JOB_DISPLAY_ORDER_NURSE 24.5
+#define JOB_DISPLAY_ORDER_BASIC_EMT 25.5
+#define JOB_UNAVAILABLE_CAREER 8

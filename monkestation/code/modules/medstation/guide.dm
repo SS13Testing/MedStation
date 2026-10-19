@@ -14,6 +14,8 @@
 		<b>Money</b>: cured patients pay the medical budget. Spend it at a <b>hospital terminal</b> (triage, staff lounge) on tools, blood, drugs and spare organs. \
 		Orders arrive as a crate in the ambulance bay.<br>\
 		<b>Rating</b>: cures raise the hospital's reputation, deaths lower it faster. A better hospital gets a bigger caseload and rarer, harder patients.<br><br>\
+		<b>Careers</b>: everyone starts as a Nurse or Basic EMT. Helping to treat patients earns career XP, saved between rounds, and \
+		ranks unlock better jobs (Doctor, Paramedic, Chemist...) and the tools and medicines that go with them. See the <b>Career</b> verb.<br><br>\
 		Use the <b>Hospital Status</b> verb (IC tab) to see how things stand, or <b>Hospital Guide</b> to read this again. \
 		When you are done for the day, call the shuttle: it docks at the departure lounge (south-east).</span>"
 
@@ -33,3 +35,5 @@
 	var/mob/living/spawned = spawned_ref?.resolve()
 	if(!QDELETED(spawned))
 		to_chat(spawned, boxed_message(hospital_guide_text()))
+		if(spawned.ckey)
+			to_chat(spawned, boxed_message(SScareers.career_summary(spawned.ckey)))

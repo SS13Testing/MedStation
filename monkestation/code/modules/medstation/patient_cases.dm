@@ -22,12 +22,17 @@
 	var/min_staff = 0
 	/// Hospital level needed before this case turns up. 0 = by difficulty (critical cases need a better hospital).
 	var/min_level = 0
+	/// Career rank (0 Trainee, 1 Qualified, 2 Senior, 3 Chief) the staff need to treat this: the director only sends cases that
+	/// somebody on duty is qualified for. The medstation_treatability test checks every need is within this rank.
+	var/required_rank = 0
 	/// Lines the patient says out loud while they wait
 	var/list/symptoms = list("Ow...")
 	/// Lines for the intake chart
 	var/list/history = list()
 	/// Set on cases that can spread so the director/staff know to isolate them
 	var/infectious = FALSE
+	/// Chemical exposure: the patient arrives contaminated and has to be washed in a shower before they can be discharged
+	var/contaminated = FALSE
 	/// Ways this patient can turn up: by ambulance (on a stretcher) and/or walking into the waiting room
 	var/list/arrival_modes = list(PATIENT_ARRIVE_AMBULANCE, PATIENT_ARRIVE_WALKIN)
 
@@ -38,6 +43,11 @@
 /// Inflicts the ailment on a freshly created patient.
 /datum/patient_case/proc/apply(mob/living/carbon/human/patient)
 	return
+
+/// Called by the director after apply(): contaminated cases arrive covered in residue.
+/datum/patient_case/proc/after_apply(mob/living/carbon/human/patient)
+	if(contaminated)
+		patient.AddComponent(/datum/component/contaminated)
 
 /// TRUE once the ailment is cured. Must be FALSE straight after apply().
 /datum/patient_case/proc/is_resolved(mob/living/carbon/human/patient)
@@ -144,6 +154,7 @@
 	name = "Penetrating chest wound"
 	diagnosis = "Punctured lung from a penetrating chest wound"
 	treatment = "Put them on a stasis bed straight away. Repair the puncture wound, give oxygen medicine (salbutamol or convermol) and heal the lung damage; severe lung damage needs surgery."
+	required_rank = 2
 	needs = list(list(/obj/machinery/stasis), list(/obj/item/stack/medical/suture, /obj/item/stack/medical/gauze), list(/datum/reagent/medicine/salbutamol, /datum/reagent/medicine/c2/convermol), list(/obj/item/scalpel), list(/obj/item/retractor), list(/obj/item/hemostat), list(/obj/item/cautery))
 	difficulty = 3
 	min_staff = 2
@@ -169,8 +180,10 @@
 /datum/patient_case/poisoning
 	name = "Suspected poisoning"
 	diagnosis = "Formaldehyde ingestion"
-	treatment = "Scan them to see what is in their blood, purge it with multiver, then heal the toxin damage."
-	needs = list(list(/datum/reagent/medicine/c2/multiver))
+	treatment = "Wash them in a shower first (they are covered in residue and it keeps hurting them). Scan them to see what is in their blood, purge it with multiver, then heal the toxin damage."
+	required_rank = 1
+	contaminated = TRUE
+	needs = list(list(/datum/reagent/medicine/c2/multiver), list(/obj/machinery/shower))
 	difficulty = 2
 	symptoms = list("I feel sick...", "My stomach is on fire.", "I drank something from the lab fridge...")
 	history = list("Mistook a chemical sample for a drink.", "Nauseous, vomiting.")
@@ -192,6 +205,7 @@
 	name = "Yellowing skin, confusion"
 	diagnosis = "Acute liver failure"
 	treatment = "Heal the toxin damage with multiver and either repair the liver or replace it (organ manipulation, donor liver from the terminal)."
+	required_rank = 2
 	needs = list(list(/datum/reagent/medicine/c2/multiver), list(/obj/item/organ/internal/liver), list(/obj/item/scalpel), list(/obj/item/retractor), list(/obj/item/hemostat), list(/obj/item/cautery))
 	difficulty = 3
 	min_staff = 2
@@ -212,8 +226,10 @@
 /datum/patient_case/respiratory
 	name = "Shortness of breath"
 	diagnosis = "Acute respiratory distress"
-	treatment = "Give oxygen medicine (salbutamol or convermol), keep their airway clear and heal the lung damage; severe damage needs lung surgery."
-	needs = list(list(/datum/reagent/medicine/salbutamol, /datum/reagent/medicine/c2/convermol))
+	treatment = "Wash them in a shower first (they are covered in residue and it keeps hurting them). Give oxygen medicine (salbutamol or convermol), keep their airway clear and heal the lung damage; severe damage needs lung surgery."
+	required_rank = 1
+	contaminated = TRUE
+	needs = list(list(/datum/reagent/medicine/salbutamol, /datum/reagent/medicine/c2/convermol), list(/obj/machinery/shower))
 	difficulty = 2
 	symptoms = list("I can't catch my breath...", "*cough* *cough*", "Everything's going dark.")
 	history = list("Inhaled fumes from a coolant leak.", "Wheezing, lips turning blue.")
@@ -256,6 +272,7 @@
 	name = "Weight loss, abdominal pain"
 	diagnosis = "Parasitic liver infection (needs the liver removed and replaced)"
 	treatment = "The parasite lives in the liver: remove the liver in surgery, then transplant a new one (donor organs can be ordered at the terminal)."
+	required_rank = 2
 	needs = list(list(/obj/item/organ/internal/liver), list(/obj/item/scalpel), list(/obj/item/retractor), list(/obj/item/hemostat), list(/obj/item/cautery))
 	difficulty = 3
 	min_staff = 2
@@ -279,6 +296,7 @@
 	name = "Severe abdominal pain"
 	diagnosis = "Appendicitis (the appendix has to come out)"
 	treatment = "Operate: remove the inflamed appendix with organ manipulation surgery. Don't leave it too long, it will burst."
+	required_rank = 1
 	needs = list(list(/obj/item/scalpel), list(/obj/item/retractor), list(/obj/item/hemostat), list(/obj/item/cautery))
 	difficulty = 2
 	weight = 9
@@ -309,6 +327,7 @@
 	name = "Debris injury to the chest"
 	diagnosis = "Glass shard lodged in the chest cavity (cavity surgery to remove it)"
 	treatment = "Cavity surgery to take the foreign body out of the chest, then close the wound and heal the damage."
+	required_rank = 2
 	needs = list(list(/obj/item/scalpel), list(/obj/item/retractor), list(/obj/item/hemostat), list(/obj/item/cautery), list(/obj/item/circular_saw))
 	difficulty = 2
 	weight = 7
@@ -336,6 +355,7 @@
 	name = "Crushing chest pain"
 	diagnosis = "Cardiac arrest"
 	treatment = "Defibrillate (CPR while the defib charges), give epinephrine to restart the heart, then treat the oxygen damage. Stasis buys time."
+	required_rank = 2
 	needs = list(list(/obj/item/defibrillator), list(/datum/reagent/medicine/epinephrine))
 	difficulty = 3
 	min_staff = 2
@@ -358,6 +378,7 @@
 	name = "Head trauma"
 	diagnosis = "Traumatic brain injury"
 	treatment = "Give mannitol for the brain damage and keep them on a stasis bed while unconscious; severe cases need brain surgery."
+	required_rank = 2
 	needs = list(list(/datum/reagent/medicine/mannitol), list(/obj/machinery/stasis))
 	difficulty = 3
 	min_staff = 2
@@ -379,8 +400,10 @@
 /datum/patient_case/eye_injury
 	name = "Eye injury"
 	diagnosis = "Chemical damage to the eyes"
-	treatment = "Oculine restores the eyes quickly, or do eye surgery for serious damage."
-	needs = list(list(/datum/reagent/medicine/oculine, /obj/item/scalpel))
+	treatment = "Wash them in a shower first (they are covered in residue and it keeps hurting them). Oculine restores the eyes quickly, or do eye surgery for serious damage."
+	required_rank = 1
+	contaminated = TRUE
+	needs = list(list(/datum/reagent/medicine/oculine, /obj/item/scalpel), list(/obj/machinery/shower))
 	difficulty = 1
 	weight = 8
 	arrival_modes = list(PATIENT_ARRIVE_WALKIN)

@@ -1150,6 +1150,11 @@ SUBSYSTEM_DEF(job)
 		JobDebug("[debug_prefix] Error: [get_job_unavailable_error_message(JOB_UNAVAILABLE_PLAYTIME, possible_job.title)], Player: [player], MissingTime: [required_playtime_remaining][add_job_to_log ? ", Job: [possible_job]" : ""]")
 		return JOB_UNAVAILABLE_PLAYTIME
 
+	// MEDSTATION EDIT: the better medical jobs need a career rank
+	if(!SScareers.can_take_job(player.client, possible_job))
+		JobDebug("[debug_prefix] Error: [get_job_unavailable_error_message(JOB_UNAVAILABLE_CAREER, possible_job.title)], Player: [player][add_job_to_log ? ", Job: [possible_job]" : ""]")
+		return JOB_UNAVAILABLE_CAREER
+
 	//MONKESTATION EDIT START
 	// Job is for donators of a specific level and fail if they did not meet the requirements.
 	if(((possible_job in holiday_restricted) || !isnull(possible_job.job_req_donor)) && (!is_admin(player.client) || !is_mentor(player.client)))

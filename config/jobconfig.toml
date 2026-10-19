@@ -22,6 +22,18 @@
 "Spawn Positions" = 0
 "Total Positions" = 0
 
+[NURSE]
+"Playtime Requirements" = 0
+"Required Account Age" = 0
+"Spawn Positions" = -1
+"Total Positions" = -1
+
+[BASIC_EMT]
+"Playtime Requirements" = 0
+"Required Account Age" = 0
+"Spawn Positions" = -1
+"Total Positions" = -1
+
 [ASSISTANT]
 "Playtime Requirements" = 0
 "Required Account Age" = 0

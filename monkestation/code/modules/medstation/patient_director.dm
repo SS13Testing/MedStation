@@ -76,9 +76,10 @@ SUBSYSTEM_DEF(patient_director)
 
 	/// Set to FALSE to stop new patients arriving (admins)
 	var/enabled = TRUE
-	/// Testing only: pretend this many medical staff are on duty / that a paramedic is
+	/// Testing only: pretend this many medical staff are on duty / that a paramedic is / that the best qualified one has this rank
 	var/staff_override
 	var/paramedic_override = FALSE
+	var/staff_rank_override
 	/// Active patients, as /datum/patient_record
 	var/list/datum/patient_record/active = list()
 	/// When the next arrival is due. Set on the first fire of the round.
@@ -174,6 +175,18 @@ SUBSYSTEM_DEF(patient_director)
 		if(player.mind?.assigned_role?.departments_bitflags & DEPARTMENT_BITFLAG_MEDICAL)
 			. += player
 
+/// The highest career rank among the staff on duty: the director only sends cases somebody here is qualified for. (With nobody
+/// on duty, or the ranks switched off, anything goes.)
+/datum/controller/subsystem/patient_director/proc/staff_max_rank()
+	if(!isnull(staff_rank_override))
+		return staff_rank_override
+	var/list/staff = get_staff()
+	if(!length(staff))
+		return length(GLOB.career_ranks) - 1
+	. = 0
+	for(var/mob/living/member as anything in staff)
+		. = max(., SScareers.rank_of_mob(member))
+
 /datum/controller/subsystem/patient_director/proc/count_staff()
 	return staff_override || length(get_staff())
 
@@ -250,9 +263,10 @@ SUBSYSTEM_DEF(patient_director)
 /// Picks a case that can arrive the given way and that this much staff can cope with.
 /datum/controller/subsystem/patient_director/proc/pick_case(staff = 1, arrival_mode)
 	var/list/candidates = list()
+	var/max_rank = staff_max_rank()
 	for(var/case_type in case_weights)
 		var/datum/patient_case/case = case_weights[case_type]
-		if(case.min_staff > staff || case.get_min_level() > level)
+		if(case.min_staff > staff || case.get_min_level() > level || case.required_rank > max_rank)
 			continue
 		if(arrival_mode && !(arrival_mode in case.arrival_modes))
 			continue
@@ -323,7 +337,7 @@ SUBSYSTEM_DEF(patient_director)
 	if(paramedic_override)
 		return TRUE
 	for(var/mob/living/staff_member as anything in get_staff())
-		if(staff_member.mind?.assigned_role?.title == JOB_PARAMEDIC)
+		if(staff_member.mind?.assigned_role?.title in list(JOB_PARAMEDIC, JOB_BASIC_EMT))
 			return TRUE
 	return FALSE
 
@@ -336,6 +350,18 @@ SUBSYSTEM_DEF(patient_director)
 		return "The ambulance is out on a call, back in about [max(0, round((ambulance_away_until - world.time) / (1 SECONDS)))] seconds."
 	return "The ambulance is free."
 
+/// A case for a scene's patients: from the scene's own list, but only ones the staff on duty are qualified for.
+/datum/controller/subsystem/patient_director/proc/pick_scene_case(datum/medstation_scene/scene)
+	var/max_rank = staff_max_rank()
+	var/list/allowed = list()
+	for(var/case_type in scene.cases)
+		var/datum/patient_case/case = case_type
+		if(initial(case.required_rank) <= max_rank)
+			allowed[case_type] = scene.cases[case_type]
+	if(length(allowed))
+		return pick_weight(allowed)
+	return pick_case(1, PATIENT_ARRIVE_AMBULANCE)
+
 /// Puts a call on the board: 1-3 patients somewhere on the station waiting for the ambulance.
 /datum/controller/subsystem/patient_director/proc/post_call(staff, room = 3, list/case_types, scene_type)
 	var/datum/medstation_scene/scene_definition = scene_type ? new scene_type() : null
@@ -343,7 +369,7 @@ SUBSYSTEM_DEF(patient_director)
 		var/scene_count = clamp(rand(scene_definition.min_patients, scene_definition.max_patients), 1, max(1, min(room, staff + 1, 3)))
 		case_types = list()
 		for(var/i in 1 to scene_count)
-			case_types += pick_weight(scene_definition.cases)
+			case_types += pick_scene_case(scene_definition)
 	if(!length(case_types))
 		var/count = 1
 		if(staff >= 2)
@@ -441,6 +467,7 @@ SUBSYSTEM_DEF(patient_director)
 		stretcher.buckle_mob(patient, force = TRUE)
 		record.stretcher_ref = WEAKREF(stretcher)
 	case.apply(patient)
+	case.after_apply(patient)
 	patient.updatehealth()
 	// a case must never start out cured (a wound failing to take, say): hurt them again until it holds
 	for(var/attempt in 1 to 5)
@@ -475,6 +502,7 @@ SUBSYSTEM_DEF(patient_director)
 	active -= record
 	if(!training_done && treated + deceased + walked_out >= TRAINING_PATIENTS)
 		training_done = TRUE
+	SScareers.reward_record(record, outcome)
 	var/datum/patient_case/case = record.case
 	switch(outcome)
 		if(PATIENT_OUTCOME_TREATED)
@@ -570,6 +598,8 @@ SUBSYSTEM_DEF(patient_director)
 /// One patient in the hospital.
 /datum/patient_record
 	var/datum/weakref/patient_ref
+	/// ckey -> how many times they used an item on the patient (for the XP split, see careers.dm)
+	var/list/contributors = list()
 	var/datum/patient_case/case
 	var/patient_name = "Unknown"
 	/// PATIENT_ARRIVE_*
@@ -604,6 +634,7 @@ SUBSYSTEM_DEF(patient_director)
 	src.case = case
 	src.arrival_mode = arrival_mode
 	patient_name = patient.real_name
+	RegisterSignal(patient, COMSIG_ATOM_ATTACKBY, PROC_REF(on_attackby))
 	arrived_at = world.time
 	deadline = world.time + case.get_deadline() * SSpatient_director.deadline_multiplier()
 	if(prob(ALLERGY_CHANCE))
@@ -614,6 +645,15 @@ SUBSYSTEM_DEF(patient_director)
 		)
 		allergy = pick(possible_allergies)
 		allergy_known = prob(ALLERGY_KNOWN_CHANCE)
+
+/// Somebody used an item on the patient: they are working on them (career XP is shared between those who did).
+/datum/patient_record/proc/on_attackby(datum/source, obj/item/attacking_item, mob/user)
+	SIGNAL_HANDLER
+	if(user?.ckey)
+		note_contributor(user.ckey)
+
+/datum/patient_record/proc/note_contributor(ckey)
+	contributors[ckey] = (contributors[ckey] || 0) + 1
 
 /datum/patient_record/proc/triage_label()
 	switch(case.difficulty)
@@ -633,6 +673,8 @@ SUBSYSTEM_DEF(patient_director)
 		lines += "- [line]"
 	if(case.infectious)
 		lines += "<br><b>Nurse's note: feverish and coughing, may be contagious. Keep away from the other patients.</b>"
+	if(case.contaminated)
+		lines += "<br><b>Crew note: covered in chemical residue. Decontaminate (shower) before anything else.</b>"
 	lines += "<br>Known allergies: [allergy && allergy_known ? "<b>[initial(allergy.name)]</b>" : "none reported"]"
 	lines += "<br><i>No diagnosis recorded. Scan the patient.</i>"
 	chart.add_raw_text(lines.Join("<br>"))
@@ -658,7 +700,9 @@ SUBSYSTEM_DEF(patient_director)
 		return
 	if(allergy && !reacted && patient.reagents?.has_reagent(allergy))
 		react(patient, SSpatient_director)
-	if(case.is_resolved(patient) && !(locate(/datum/disease/anaphylaxis) in patient.diseases))
+	if(is_contaminated(patient))
+		patient.adjustToxLoss(1) // the residue keeps hurting them until it is washed off
+	if(case.is_resolved(patient) && !is_contaminated(patient) && !(locate(/datum/disease/anaphylaxis) in patient.diseases))
 		discharge_at = world.time + PATIENT_DISCHARGE_DELAY
 		patient.SetUnconscious(0)
 		to_chat(patient, span_notice("You feel much better."))

@@ -27,6 +27,10 @@
 	if(source_atom != src) //if we are someone else then call that attack chain else we can proceed with the usual stuff
 		return source_atom.melee_attack_chain(user, target, modifiers, attack_modifiers)
 
+	// MEDSTATION EDIT: tools and medicines need a career rank to be used on patients
+	if(!SScareers.may_use_item(user, src, target))
+		return TRUE
+
 	var/is_right_clicking = (user.istate & ISTATE_SECONDARY)
 
 	var/item_interact_result = target.base_item_interaction(user, src, modifiers)

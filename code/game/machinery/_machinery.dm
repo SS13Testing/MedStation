@@ -700,6 +700,9 @@
 
 //Return a non FALSE value to interrupt attack_hand propagation to subtypes.
 /obj/machinery/interact(mob/user, special_state)
+	// MEDSTATION EDIT: some machines need a career rank
+	if(!SScareers.may_operate(user, src))
+		return TRUE
 	if(interaction_flags_machine & INTERACT_MACHINE_SET_MACHINE)
 		user.set_machine(src)
 	update_last_used(user)

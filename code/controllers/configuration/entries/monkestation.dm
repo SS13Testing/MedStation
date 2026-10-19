@@ -108,3 +108,10 @@
 /datum/config_entry/string/plexora_verification_required_roleid
 
 /datum/config_entry/flag/cassettes_in_db
+
+/// MedStation: 1 = career ranks gate jobs, tools, medicines and machines; 0 = everybody counts as a Chief
+/datum/config_entry/number/medstation_career_locks
+	default = 1
+	integer = TRUE
+	min_val = 0
+	max_val = 1

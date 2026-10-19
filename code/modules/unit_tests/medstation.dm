@@ -462,10 +462,49 @@
 		for(var/list/group as anything in case.needs)
 			var/found = FALSE
 			for(var/wanted in group)
-				if(obtainable(wanted))
+				// obtainable from the start, and usable at the rank this case is sent to
+				if(obtainable(wanted) && career_rank_for_type(wanted) <= case.required_rank)
 					found = TRUE
 					break
-			TEST_ASSERT(found, "[case_type] needs one of [json_encode(group)] but the hospital can't provide any of them")
+			TEST_ASSERT(found, "[case_type] (rank [case.required_rank]) needs one of [json_encode(group)] but the hospital can't provide any of them at that rank")
+
+/// Chemical cases arrive contaminated, can't be discharged until they have been washed, and a wash clears it.
+/datum/unit_test/medstation_decon
+
+/datum/unit_test/medstation_decon/Run()
+	var/datum/controller/subsystem/patient_director/director = SSpatient_director
+	director.active.Cut()
+	var/datum/patient_record/record = director.spawn_patient(/datum/patient_case/poisoning, run_loc_floor_bottom_left, 1)
+	TEST_ASSERT_NOTNULL(record, "couldn't spawn a poisoning patient")
+	var/mob/living/carbon/human/patient = record.patient_ref.resolve()
+	TEST_ASSERT(is_contaminated(patient), "a chemical case should arrive contaminated")
+	var/chart_text = ""
+	for(var/datum/paper_input/input as anything in record.make_chart().raw_text_inputs)
+		chart_text += input.raw_text
+	TEST_ASSERT(findtext(chart_text, "Decontaminate"), "the chart should say to decontaminate the patient")
+	// otherwise cured, but still covered in residue: not discharged, and the residue keeps hurting them
+	patient.reagents.clear_reagents()
+	patient.adjustToxLoss(-patient.getToxLoss(), forced = TRUE)
+	patient.updatehealth()
+	record.process_record(director)
+	TEST_ASSERT(isnull(record.discharge_at), "a contaminated patient must not be queued for discharge")
+	TEST_ASSERT(patient.getToxLoss() > 0, "contamination should keep hurting the patient")
+	// a wash (what a shower does) clears it
+	patient.wash(CLEAN_RAD | CLEAN_WASH)
+	TEST_ASSERT(!is_contaminated(patient), "washing should clear the contamination")
+	patient.adjustToxLoss(-patient.getToxLoss(), forced = TRUE)
+	patient.updatehealth()
+	record.process_record(director)
+	TEST_ASSERT_NOTNULL(record.discharge_at, "once washed and cured the patient should be queued for discharge (tox [patient.getToxLoss()], resolved [record.case.is_resolved(patient)])")
+	// cases that aren't chemical are not contaminated
+	var/datum/patient_record/clean = director.spawn_patient(/datum/patient_case/burns, run_loc_floor_bottom_left, 1)
+	TEST_ASSERT(!is_contaminated(clean.patient_ref.resolve()), "a burns patient is not contaminated")
+	// the chemical cases all need a shower, and the hospital has them
+	for(var/case_type in list(/datum/patient_case/poisoning, /datum/patient_case/respiratory, /datum/patient_case/eye_injury))
+		var/datum/patient_case/case = new case_type()
+		TEST_ASSERT(case.contaminated, "[case_type] should be a contaminated case")
+		TEST_ASSERT(findtext(case.treatment, "shower"), "[case_type]'s treatment hint should mention the shower")
+	director.active.Cut()
 
 /// Contagious patients: the chart warns about them and keeping them in the isolation lab earns a bonus.
 /datum/unit_test/medstation_quarantine
@@ -564,7 +603,7 @@
 
 /datum/unit_test/medstation_guide/Run()
 	var/text = hospital_guide_text()
-	for(var/keyword in list("ambulance", "walk-ins", "intake chart", "Triage", "hospital terminal", "Rating", "shuttle"))
+	for(var/keyword in list("ambulance", "walk-ins", "intake chart", "Triage", "hospital terminal", "Rating", "shuttle", "Careers"))
 		TEST_ASSERT(findtext(text, keyword), "the hospital guide doesn't mention [keyword]")
 
 /// The case library only shows cases the staff have seen.
@@ -636,7 +675,14 @@
 	// Start landmarks delete themselves once the round has started (before the tests run), so read the map file.
 	var/map_text = file2text("_maps/map_files/debug/medstation.dmm")
 	TEST_ASSERT(length(map_text), "could not read medstation.dmm")
-	for(var/job_landmark in list("medical_doctor", "paramedic", "chemist", "virologist", "psychologist", "geneticist", "chief_medical_officer"))
+	// showers to decontaminate patients, and toilets and sinks for everyone
+	var/shower_count = length(splittext(map_text, "/obj/machinery/shower")) - 1
+	var/toilet_count = length(splittext(map_text, "/obj/structure/toilet")) - 1
+	var/sink_count = length(splittext(map_text, "/obj/structure/sink")) - 1
+	TEST_ASSERT(shower_count >= 3, "the hospital should have at least 3 showers (has [shower_count])")
+	TEST_ASSERT(toilet_count >= 3, "the hospital should have at least 3 toilets (has [toilet_count])")
+	TEST_ASSERT(sink_count >= 6, "the hospital should have at least 6 sinks (has [sink_count])")
+	for(var/job_landmark in list("nurse", "basic_emt", "medical_doctor", "paramedic", "chemist", "virologist", "psychologist", "geneticist", "chief_medical_officer"))
 		TEST_ASSERT(findtext(map_text, "/obj/effect/landmark/start/[job_landmark]"), "map has no [job_landmark] start landmark")
 
 /// A long randomised run of the whole director: patients, events, ambulance calls and scenes, with random cures, deaths and
@@ -718,11 +764,221 @@
 	TEST_ASSERT(most_active < 60, "patients piled up without limit ([most_active])")
 	TEST_ASSERT(!director.ambulance_away_from_home(), "the ambulance should be home after the soak run")
 
+/// Careers: XP maths, ranks, job gating and saving to disk.
+/datum/unit_test/medstation_careers
+
+/datum/unit_test/medstation_careers/Run()
+	var/old_dir = SScareers.career_dir
+	var/old_cache = SScareers.cache
+	SScareers.career_dir = "data/medstation_test_careers"
+	SScareers.cache = list()
+	var/test_ckey = "zzcareertest"
+	TEST_ASSERT_EQUAL(SScareers.get_xp(test_ckey), 0, "a new player has no XP")
+	TEST_ASSERT_EQUAL(SScareers.rank_of_ckey(test_ckey), 0, "a new player is a Trainee")
+	for(var/list/pair in list(list(0, 0), list(299, 0), list(300, 1), list(999, 1), list(1000, 2), list(2499, 2), list(2500, 3), list(99999, 3)))
+		TEST_ASSERT_EQUAL(SScareers.rank_for_xp(pair[1]), pair[2], "[pair[1]] XP should be rank [pair[2]]")
+	SScareers.add_xp(test_ckey, 350, "test")
+	TEST_ASSERT_EQUAL(SScareers.rank_of_ckey(test_ckey), 1, "350 XP should be Qualified")
+	SScareers.add_xp(test_ckey, -1000, "penalty")
+	TEST_ASSERT_EQUAL(SScareers.get_xp(test_ckey), 0, "XP can't go below zero")
+	SScareers.add_xp(test_ckey, 1200, "more")
+	SScareers.cache = list() // forget the memory: it has to come back from the file
+	TEST_ASSERT_EQUAL(SScareers.get_xp(test_ckey), 1200, "XP should be saved to disk and come back")
+	TEST_ASSERT_EQUAL(SScareers.rank_of_ckey(test_ckey), 2, "1200 XP should be Senior")
+	// jobs: a Senior can be a virologist but not the CMO; anyone can be a nurse or a basic EMT; a newcomer can't be a doctor
+	TEST_ASSERT(SScareers.can_ckey_take_job(test_ckey, JOB_VIROLOGIST), "a Senior should be able to take Virologist")
+	TEST_ASSERT(SScareers.can_ckey_take_job(test_ckey, JOB_MEDICAL_DOCTOR), "a Senior should be able to take Medical Doctor")
+	TEST_ASSERT(!SScareers.can_ckey_take_job(test_ckey, JOB_CHIEF_MEDICAL_OFFICER), "a Senior shouldn't be able to take Chief Medical Officer")
+	var/fresh = "zzfreshplayer"
+	for(var/title in list(JOB_NURSE, JOB_BASIC_EMT))
+		TEST_ASSERT(SScareers.can_ckey_take_job(fresh, title), "a newcomer should be able to take [title]")
+	for(var/title in list(JOB_MEDICAL_DOCTOR, JOB_PARAMEDIC, JOB_CHEMIST, JOB_CHIEF_MEDICAL_OFFICER))
+		TEST_ASSERT(!SScareers.can_ckey_take_job(fresh, title), "a newcomer shouldn't be able to take [title]")
+	TEST_ASSERT(GLOB.career_job_ranks[JOB_PARAMEDIC] > GLOB.career_job_ranks[JOB_BASIC_EMT], "Paramedic should be a step above Basic EMT")
+	TEST_ASSERT(GLOB.career_job_ranks[JOB_MEDICAL_DOCTOR] > GLOB.career_job_ranks[JOB_NURSE], "Medical Doctor should be a step above Nurse")
+	TEST_ASSERT(GLOB.career_job_ranks[JOB_CHIEF_MEDICAL_OFFICER] == length(GLOB.career_ranks) - 1, "the CMO should need the top rank")
+	var/summary = SScareers.career_summary(test_ckey)
+	TEST_ASSERT(findtext(summary, "Senior") && findtext(summary, "XP"), "the career summary should show the rank and XP")
+	fdel("data/medstation_test_careers/")
+	SScareers.career_dir = old_dir
+	SScareers.cache = old_cache
+
+/// Locks: a Trainee can't use surgical tools, advanced medicines or the chemistry machines on patients, a Qualified rank can,
+/// the CMO's hypospray needs a Chief, and unplayed mobs (patients, dummies) are unrestricted.
+/datum/unit_test/medstation_locks
+
+/datum/unit_test/medstation_locks/Run()
+	var/mob/living/carbon/human/trainee = allocate(/mob/living/carbon/human/consistent)
+	var/mob/living/carbon/human/qualified = allocate(/mob/living/carbon/human/consistent)
+	var/mob/living/carbon/human/chief = allocate(/mob/living/carbon/human/consistent)
+	var/mob/living/carbon/human/unplayed = allocate(/mob/living/carbon/human/consistent)
+	var/mob/living/carbon/human/patient = allocate(/mob/living/carbon/human/consistent)
+	SScareers.rank_override[trainee] = 0
+	SScareers.rank_override[qualified] = 1
+	SScareers.rank_override[chief] = 3
+	var/obj/item/scalpel/scalpel = allocate(/obj/item/scalpel)
+	var/obj/item/circular_saw/saw = allocate(/obj/item/circular_saw)
+	var/obj/item/stack/medical/gauze/gauze = allocate(/obj/item/stack/medical/gauze)
+	var/obj/item/healthanalyzer/analyzer = allocate(/obj/item/healthanalyzer)
+	TEST_ASSERT(!SScareers.may_use_item(trainee, scalpel, patient), "a Trainee shouldn't be able to operate")
+	TEST_ASSERT(SScareers.may_use_item(qualified, scalpel, patient), "a Qualified rank should be able to use a scalpel")
+	TEST_ASSERT(!SScareers.may_use_item(qualified, saw, patient), "a Qualified rank shouldn't use the bone saw yet")
+	TEST_ASSERT(SScareers.may_use_item(chief, saw, patient), "a Chief should be able to use the saw")
+	TEST_ASSERT(SScareers.may_use_item(trainee, gauze, patient), "a Trainee should be able to bandage")
+	TEST_ASSERT(SScareers.may_use_item(trainee, analyzer, patient), "a Trainee should be able to scan")
+	TEST_ASSERT(SScareers.may_use_item(unplayed, scalpel, patient), "unplayed mobs are unrestricted")
+	// only treatments on patients are locked: a scalpel on a table is nobody's business
+	var/obj/structure/table/table = allocate(/obj/structure/table)
+	TEST_ASSERT(SScareers.may_use_item(trainee, scalpel, table), "tools are only locked when used on patients")
+	// medicines are locked by what is in them
+	var/obj/item/reagent_containers/syringe/syringe = allocate(/obj/item/reagent_containers/syringe)
+	syringe.reagents.add_reagent(/datum/reagent/medicine/c2/multiver, 5)
+	TEST_ASSERT(!SScareers.may_use_item(trainee, syringe, patient), "a Trainee shouldn't give multiver")
+	TEST_ASSERT(SScareers.may_use_item(qualified, syringe, patient), "a Qualified rank should be able to give multiver")
+	var/obj/item/reagent_containers/syringe/basic_syringe = allocate(/obj/item/reagent_containers/syringe)
+	basic_syringe.reagents.add_reagent(/datum/reagent/medicine/c2/libital, 5)
+	TEST_ASSERT(SScareers.may_use_item(trainee, basic_syringe, patient), "a Trainee should be able to give a basic brute medicine")
+	var/obj/item/reagent_containers/syringe/toxin_syringe = allocate(/obj/item/reagent_containers/syringe)
+	toxin_syringe.reagents.add_reagent(/datum/reagent/toxin/formaldehyde, 5)
+	TEST_ASSERT(!SScareers.may_use_item(qualified, toxin_syringe, patient), "poisons need the top ranks")
+	TEST_ASSERT_EQUAL(career_rank_for_reagent(/datum/reagent/toxin/formaldehyde), 3, "poisons should need the top rank")
+	TEST_ASSERT_EQUAL(career_rank_for_reagent(/datum/reagent/water), 0, "water is free for everybody")
+	TEST_ASSERT_EQUAL(career_rank_for_reagent(/datum/reagent/medicine/epinephrine), 1, "epinephrine should need Qualified")
+	TEST_ASSERT_EQUAL(career_rank_for_reagent(/datum/reagent/medicine/c2/libital), 0, "basic brute medicine is open to Trainees")
+	// the CMO's hypospray is above the ordinary one
+	TEST_ASSERT(career_lock_for_type(/obj/item/hypospray, GLOB.career_item_locks) < career_lock_for_type(/obj/item/hypospray/cmo, GLOB.career_item_locks), "the CMO hypospray should need a higher rank")
+	// machines
+	TEST_ASSERT_EQUAL(career_rank_for_type(/obj/machinery/chem_dispenser), 1, "the chem dispenser should need Qualified")
+	TEST_ASSERT_EQUAL(career_rank_for_type(/obj/machinery/stasis), 0, "stasis beds are open to everybody")
+	var/obj/machinery/chem_dispenser/dispenser = allocate(/obj/machinery/chem_dispenser)
+	TEST_ASSERT(!SScareers.may_operate(trainee, dispenser), "a Trainee shouldn't run the chemistry dispenser")
+	TEST_ASSERT(SScareers.may_operate(qualified, dispenser), "a Qualified rank should run the dispenser")
+	SScareers.rank_override.Cut()
+
+/// The director only sends cases that somebody on duty is qualified for, scenes included.
+/datum/unit_test/medstation_rank_cases
+
+/datum/unit_test/medstation_rank_cases/Run()
+	var/datum/controller/subsystem/patient_director/director = SSpatient_director
+	var/old_level = director.level
+	director.level = length(GLOB.hospital_levels) // the best hospital, so levels don't hide anything
+	director.staff_rank_override = 0
+	for(var/i in 1 to 200)
+		var/picked = director.pick_case(6)
+		var/datum/patient_case/case = new picked()
+		TEST_ASSERT(case.required_rank <= 0, "[picked] was picked for a staff of Trainees")
+	var/saw_rank_one = FALSE
+	director.staff_rank_override = 1
+	for(var/i in 1 to 400)
+		var/picked = director.pick_case(6)
+		var/datum/patient_case/case = new picked()
+		TEST_ASSERT(case.required_rank <= 1, "[picked] was picked for a staff of Qualified rank")
+		if(case.required_rank == 1)
+			saw_rank_one = TRUE
+	TEST_ASSERT(saw_rank_one, "a Qualified staff should see rank 1 cases")
+	var/saw_rank_two = FALSE
+	director.staff_rank_override = 3
+	for(var/i in 1 to 600)
+		var/picked = director.pick_case(6)
+		var/datum/patient_case/case = new picked()
+		if(case.required_rank >= 2)
+			saw_rank_two = TRUE
+	TEST_ASSERT(saw_rank_two, "a Chief-led staff should see the hard cases")
+	// scenes: even a chemical spill only hands Trainees what they can treat
+	director.staff_rank_override = 0
+	for(var/i in 1 to 30)
+		var/datum/ambulance_call/emergency = director.post_call(3, 3, null, /datum/medstation_scene/hydroponics)
+		for(var/case_type in emergency.case_types)
+			var/datum/patient_case/case = new case_type()
+			TEST_ASSERT(case.required_rank <= 0, "a scene call for Trainees contained [case_type]")
+	director.pending_calls.Cut()
+	director.staff_rank_override = null
+	director.level = old_level
+
+/// Career XP is paid out to the people who worked on a patient, and only them.
+/datum/unit_test/medstation_xp_awards
+
+/datum/unit_test/medstation_xp_awards/Run()
+	var/datum/controller/subsystem/patient_director/director = SSpatient_director
+	var/old_dir = SScareers.career_dir
+	var/old_cache = SScareers.cache
+	SScareers.career_dir = "data/medstation_test_careers"
+	SScareers.cache = list()
+	director.active.Cut()
+	// a cured ambulance patient (difficulty 1): 40 x 1.25 for the people who worked on them twice or more
+	var/datum/patient_record/cured = director.spawn_patient(/datum/patient_case/burns, run_loc_floor_bottom_left, 1)
+	cured.note_contributor("zzxpa")
+	cured.note_contributor("zzxpa")
+	cured.note_contributor("zzxpb")
+	cured.discharge(cured.patient_ref.resolve(), director)
+	TEST_ASSERT_EQUAL(SScareers.get_xp("zzxpa"), 50, "a difficulty 1 ambulance cure is worth 50 XP")
+	TEST_ASSERT_EQUAL(SScareers.get_xp("zzxpb"), 0, "touching a patient once doesn't earn XP")
+	// a walk-in has no emergency bonus
+	var/datum/patient_record/walkin = director.spawn_patient(/datum/patient_case/burns, run_loc_floor_bottom_left, 1, PATIENT_ARRIVE_WALKIN)
+	walkin.note_contributor("zzxpa")
+	walkin.note_contributor("zzxpa")
+	walkin.discharge(walkin.patient_ref.resolve(), director)
+	TEST_ASSERT_EQUAL(SScareers.get_xp("zzxpa"), 90, "a walk-in cure is worth 40 XP")
+	// a correct triage tag adds a bonus
+	var/datum/patient_record/tagged = director.spawn_patient(/datum/patient_case/burns, run_loc_floor_bottom_left, 1)
+	tagged.tag_level = TRIAGE_GREEN
+	tagged.note_contributor("zzxpa")
+	tagged.note_contributor("zzxpa")
+	tagged.discharge(tagged.patient_ref.resolve(), director)
+	TEST_ASSERT_EQUAL(SScareers.get_xp("zzxpa"), 150, "a correct triage tag is worth 10 more XP")
+	// a patient who is lost still teaches a little
+	var/datum/patient_record/lost = director.spawn_patient(/datum/patient_case/burns, run_loc_floor_bottom_left, 1)
+	lost.note_contributor("zzxpa")
+	lost.note_contributor("zzxpa")
+	var/mob/living/carbon/human/body = lost.patient_ref.resolve()
+	body.death()
+	lost.process_record(director)
+	TEST_ASSERT_EQUAL(SScareers.get_xp("zzxpa"), 160, "a lost patient is worth a little XP to those who tried")
+	// the attack signal is wired up and ignores people who aren't players
+	var/datum/patient_record/watched = director.spawn_patient(/datum/patient_case/burns, run_loc_floor_bottom_left, 1)
+	var/mob/living/carbon/human/watched_patient = watched.patient_ref.resolve()
+	var/obj/item/stack/medical/gauze/gauze = allocate(/obj/item/stack/medical/gauze)
+	var/mob/living/carbon/human/unplayed = allocate(/mob/living/carbon/human/consistent)
+	SEND_SIGNAL(watched_patient, COMSIG_ATOM_ATTACKBY, gauze, unplayed)
+	TEST_ASSERT(!length(watched.contributors), "an unplayed mob shouldn't count as a contributor")
+	director.active.Cut()
+	fdel("data/medstation_test_careers/")
+	SScareers.career_dir = old_dir
+	SScareers.cache = old_cache
+
+/// The Nurse and Basic EMT jobs exist, are unlimited, are the overflow role, and the map and config know them.
+/datum/unit_test/medstation_career_jobs
+
+/datum/unit_test/medstation_career_jobs/Run()
+	for(var/title in list(JOB_NURSE, JOB_BASIC_EMT))
+		var/datum/job/job = SSjob.GetJob(title)
+		TEST_ASSERT_NOTNULL(job, "[title] isn't a job")
+		TEST_ASSERT_EQUAL(job.total_positions, -1, "[title] should have unlimited slots")
+		TEST_ASSERT(job.departments_bitflags & DEPARTMENT_BITFLAG_MEDICAL, "[title] should be a medical job")
+		TEST_ASSERT(ispath(job.outfit, /datum/outfit/job), "[title] has no outfit")
+	TEST_ASSERT_EQUAL(SSjob.overflow_role, /datum/job/nurse, "players without a job should start as a Nurse")
+	var/job_config = file2text("config/jobconfig.toml")
+	TEST_ASSERT(findtext(job_config, "\[NURSE]") && findtext(job_config, "\[BASIC_EMT]"), "jobconfig.toml doesn't list the new jobs")
+	// every job in the ladder exists
+	for(var/title in GLOB.career_job_ranks)
+		TEST_ASSERT_NOTNULL(SSjob.GetJob(title), "the career ladder lists [title] which isn't a job")
+
+/// Every MedStation test has to be registered with TEST_FOCUS, or it silently never runs.
+/datum/unit_test/medstation_tests_are_focused
+
+/datum/unit_test/medstation_tests_are_focused/Run()
+	for(var/test_type in subtypesof(/datum/unit_test))
+		if(!findtext("[test_type]", "/datum/unit_test/medstation_") && !(test_type in list(/datum/unit_test/patient_cases, /datum/unit_test/patient_director)))
+			continue
+		var/datum/unit_test/test = test_type
+		TEST_ASSERT(initial(test.test_flags) & UNIT_TEST_FOCUS, "[test_type] has no TEST_FOCUS line, so it never runs")
+
 TEST_FOCUS(/datum/unit_test/patient_cases)
 TEST_FOCUS(/datum/unit_test/patient_director)
 TEST_FOCUS(/datum/unit_test/medstation_ambulance)
 TEST_FOCUS(/datum/unit_test/medstation_flows)
 TEST_FOCUS(/datum/unit_test/medstation_field)
+TEST_FOCUS(/datum/unit_test/medstation_decon)
 TEST_FOCUS(/datum/unit_test/medstation_economy)
 TEST_FOCUS(/datum/unit_test/medstation_quarantine)
 TEST_FOCUS(/datum/unit_test/medstation_solo)
@@ -736,4 +992,10 @@ TEST_FOCUS(/datum/unit_test/medstation_events)
 TEST_FOCUS(/datum/unit_test/medstation_supplies)
 TEST_FOCUS(/datum/unit_test/medstation_map)
 TEST_FOCUS(/datum/unit_test/medstation_soak)
+TEST_FOCUS(/datum/unit_test/medstation_careers)
+TEST_FOCUS(/datum/unit_test/medstation_locks)
+TEST_FOCUS(/datum/unit_test/medstation_rank_cases)
+TEST_FOCUS(/datum/unit_test/medstation_xp_awards)
+TEST_FOCUS(/datum/unit_test/medstation_career_jobs)
+TEST_FOCUS(/datum/unit_test/medstation_tests_are_focused)
 #endif

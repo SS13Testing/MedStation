@@ -15,6 +15,10 @@ $include storyteller.txt
 ## MedStation: no storyteller, so no antagonists or random hostile events.
 DISABLE_STORYTELLER
 
+## MedStation careers: 1 = ranks gate jobs, tools, medicines and machines (everyone starts as a Nurse or Basic EMT and earns XP);
+## 0 = everybody may do everything.
+MEDSTATION_CAREER_LOCKS 1
+
 # You can use the @ character at the beginning of a config option to lock it from being edited in-game
 # Example usage:
 # @SERVERNAME tgstation
