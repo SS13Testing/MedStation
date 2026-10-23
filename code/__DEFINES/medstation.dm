@@ -29,3 +29,6 @@
 #define SHOCK_MAX 100
 /// Shock level below which a patient counts as stable (needed for discharge)
 #define SHOCK_STABLE 20
+
+/// Chance per director tick that an untreated open wound past its deadline gets infected (see infection.dm)
+#define INFECTION_CHANCE 15

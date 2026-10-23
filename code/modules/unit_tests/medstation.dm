@@ -1024,6 +1024,39 @@
 	TEST_ASSERT(shock.level < SHOCK_STABLE, "a healed patient on saline should recover from shock (level [shock.level])")
 	director.active.Cut()
 
+/// Wound infection: open wounds can fester, which blocks discharge until antibiotics clear it.
+/datum/unit_test/medstation_infection
+
+/datum/unit_test/medstation_infection/Run()
+	var/datum/controller/subsystem/patient_director/director = SSpatient_director
+	director.active.Cut()
+	for(var/case_type in list(/datum/patient_case/laceration, /datum/patient_case/shrapnel, /datum/patient_case/chest_wound))
+		var/datum/patient_case/case = new case_type()
+		TEST_ASSERT(case.open_wound, "[case_type] should be an open wound case")
+	var/datum/patient_case/flu = new /datum/patient_case/flu()
+	TEST_ASSERT(!flu.open_wound, "flu is not an open wound")
+	var/datum/patient_record/record = director.spawn_patient(/datum/patient_case/laceration, run_loc_floor_bottom_left, 1)
+	var/mob/living/carbon/human/patient = record.patient_ref.resolve()
+	TEST_ASSERT(!is_infected(patient), "a fresh patient is not infected")
+	// infected and otherwise fixed up: still no discharge, and the toxins build
+	patient.AddComponent(/datum/component/wound_infection)
+	TEST_ASSERT(is_infected(patient), "the infection should attach")
+	patient.setBruteLoss(0)
+	patient.blood_volume = BLOOD_VOLUME_NORMAL
+	patient.updatehealth()
+	var/tox_before = patient.getToxLoss()
+	record.process_record(director)
+	TEST_ASSERT(patient.getToxLoss() > tox_before, "an infection should poison the patient")
+	TEST_ASSERT(isnull(record.discharge_at), "an infected patient must not be discharged")
+	var/list/scan = list()
+	SEND_SIGNAL(patient, COMSIG_LIVING_HEALTHSCAN, scan, TRUE, null, 1, FALSE) // 1 is the verbose scan mode
+	TEST_ASSERT(findtext(scan.Join(), "spaceacillin"), "the advanced scan should recommend antibiotics")
+	// antibiotics clear it
+	patient.reagents.add_reagent(/datum/reagent/medicine/antipathogenic/spaceacillin, 5)
+	record.process_record(director)
+	TEST_ASSERT(!is_infected(patient), "spaceacillin should clear the infection")
+	director.active.Cut()
+
 /// Every MedStation test has to be registered with TEST_FOCUS, or it silently never runs.
 /datum/unit_test/medstation_tests_are_focused
 
@@ -1041,6 +1074,7 @@ TEST_FOCUS(/datum/unit_test/medstation_flows)
 TEST_FOCUS(/datum/unit_test/medstation_field)
 TEST_FOCUS(/datum/unit_test/medstation_decon)
 TEST_FOCUS(/datum/unit_test/medstation_shock)
+TEST_FOCUS(/datum/unit_test/medstation_infection)
 TEST_FOCUS(/datum/unit_test/medstation_economy)
 TEST_FOCUS(/datum/unit_test/medstation_quarantine)
 TEST_FOCUS(/datum/unit_test/medstation_solo)

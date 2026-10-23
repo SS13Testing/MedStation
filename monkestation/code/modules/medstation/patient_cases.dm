@@ -33,6 +33,8 @@
 	var/infectious = FALSE
 	/// Chemical exposure: the patient arrives contaminated and has to be washed in a shower before they can be discharged
 	var/contaminated = FALSE
+	/// Open wounds: left untreated past the deadline they can become infected (see infection.dm)
+	var/open_wound = FALSE
 	/// Ways this patient can turn up: by ambulance (on a stretcher) and/or walking into the waiting room
 	var/list/arrival_modes = list(PATIENT_ARRIVE_AMBULANCE, PATIENT_ARRIVE_WALKIN)
 
@@ -115,6 +117,7 @@
 
 /datum/patient_case/laceration
 	name = "Deep laceration"
+	open_wound = TRUE
 	diagnosis = "Arterial laceration, ongoing bleeding"
 	treatment = "Stop the bleeding first (gauze or sutures). If they have lost a lot of blood, transfuse the right blood type, then heal the brute damage."
 	needs = list(list(/obj/item/stack/medical/gauze, /obj/item/stack/medical/suture), list(/obj/item/reagent_containers/blood))
@@ -152,6 +155,7 @@
 
 /datum/patient_case/chest_wound
 	name = "Penetrating chest wound"
+	open_wound = TRUE
 	diagnosis = "Punctured lung from a penetrating chest wound"
 	treatment = "Put them on a stasis bed straight away. Repair the puncture wound, give oxygen medicine (salbutamol or convermol) and heal the lung damage; severe lung damage needs surgery."
 	required_rank = 2
@@ -325,6 +329,7 @@
 
 /datum/patient_case/shrapnel
 	name = "Debris injury to the chest"
+	open_wound = TRUE
 	diagnosis = "Glass shard lodged in the chest cavity (cavity surgery to remove it)"
 	treatment = "Cavity surgery to take the foreign body out of the chest, then close the wound and heal the damage."
 	required_rank = 2

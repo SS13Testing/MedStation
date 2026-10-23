@@ -7932,6 +7932,7 @@
 #include "monkestation\code\modules\medstation\field_calls.dm"
 #include "monkestation\code\modules\medstation\decontamination.dm"
 #include "monkestation\code\modules\medstation\shock.dm"
+#include "monkestation\code\modules\medstation\infection.dm"
 #include "monkestation\code\modules\medstation\field_response.dm"
 #include "monkestation\code\modules\medstation\field_scenes.dm"
 #include "monkestation\code\modules\medstation\areas.dm"

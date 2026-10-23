@@ -50,6 +50,9 @@ staff lockers; toilets and sinks are in the waiting room, ER and lockers. (`deco
 clammy at 35, collapsed and suffocating at 70. Lying them down and painkillers halve the climb; saline and epinephrine drain it;
 stasis freezes it. A patient still in shock (20+) is not discharged. (`shock.dm`)
 
+**Wound infection.** Open-wound cases (laceration, shrapnel, penetrating chest wound) left past their deadline can get infected:
+fever, creeping toxin damage, no discharge until spaceacillin clears it. Stasis prevents it. (`infection.dm`)
+
 **Careers.** Everyone starts as a Nurse or Basic EMT (always open, and the overflow role). Helping to treat patients earns
 career XP, kept per player in `data/medstation/careers/<ckey>.json`, so it survives rounds. (`careers.dm`, `career_locks.dm`,
 `career_jobs.dm`)
