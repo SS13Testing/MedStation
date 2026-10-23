@@ -1057,6 +1057,20 @@
 	TEST_ASSERT(!is_infected(patient), "spaceacillin should clear the infection")
 	director.active.Cut()
 
+/// The vitals monitor reads patients lying nearby.
+/datum/unit_test/medstation_vitals_monitor
+
+/datum/unit_test/medstation_vitals_monitor/Run()
+	var/obj/machinery/computer/vitals_monitor/monitor = allocate(/obj/machinery/computer/vitals_monitor, run_loc_floor_bottom_left)
+	TEST_ASSERT(findtext(monitor.get_readout(), "No patients"), "an empty room should read no patients")
+	var/mob/living/carbon/human/patient = allocate(/mob/living/carbon/human/consistent, get_step(run_loc_floor_bottom_left, EAST))
+	patient.Paralyze(10 SECONDS)
+	patient.set_body_position(LYING_DOWN)
+	var/text = monitor.get_readout()
+	TEST_ASSERT(findtext(text, patient.real_name) && findtext(text, "bpm") && findtext(text, "BP"), "the monitor should list the lying patient's vitals (got [text])")
+	patient.set_body_position(STANDING_UP)
+	TEST_ASSERT(findtext(monitor.get_readout(), "No patients"), "standing people are not monitored")
+
 /// Every MedStation test has to be registered with TEST_FOCUS, or it silently never runs.
 /datum/unit_test/medstation_tests_are_focused
 
@@ -1074,6 +1088,7 @@ TEST_FOCUS(/datum/unit_test/medstation_flows)
 TEST_FOCUS(/datum/unit_test/medstation_field)
 TEST_FOCUS(/datum/unit_test/medstation_decon)
 TEST_FOCUS(/datum/unit_test/medstation_shock)
+TEST_FOCUS(/datum/unit_test/medstation_vitals_monitor)
 TEST_FOCUS(/datum/unit_test/medstation_infection)
 TEST_FOCUS(/datum/unit_test/medstation_economy)
 TEST_FOCUS(/datum/unit_test/medstation_quarantine)

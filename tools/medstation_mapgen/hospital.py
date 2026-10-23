@@ -339,6 +339,7 @@ def furnish(g):
 		g.put(x, y1 + 5, "/obj/machinery/stasis")
 		g.put(x, y1 + 3, "/obj/machinery/iv_drip")
 	g.put(x1, y1 + 1, "/obj/machinery/computer/crew")
+	g.put(x1 + 1, y1 + 1, "/obj/machinery/computer/vitals_monitor")
 	g.put(x2, y1 + 1, "/obj/machinery/vending/medical")
 	g.put(x2, y2, "/obj/machinery/smartfridge/organ")
 	g.put(x2 - 1, y2, "/obj/structure/closet/crate/freezer", "/obj/item/reagent_containers/blood/o_minus", "/obj/item/reagent_containers/blood/o_minus", "/obj/item/reagent_containers/blood/o_minus", "/obj/item/reagent_containers/blood/o_plus", "/obj/item/reagent_containers/blood/o_plus", "/obj/item/reagent_containers/blood/a_plus", "/obj/item/reagent_containers/blood/b_plus")

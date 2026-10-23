@@ -53,6 +53,9 @@ stasis freezes it. A patient still in shock (20+) is not discharged. (`shock.dm`
 **Wound infection.** Open-wound cases (laceration, shrapnel, penetrating chest wound) left past their deadline can get infected:
 fever, creeping toxin damage, no discharge until spaceacillin clears it. Stasis prevents it. (`infection.dm`)
 
+**Vitals monitor.** A computer in the ICU that lists pulse, blood pressure, blood level and shock for every patient lying within
+4 tiles. (`vitals_monitor.dm`)
+
 **Careers.** Everyone starts as a Nurse or Basic EMT (always open, and the overflow role). Helping to treat patients earns
 career XP, kept per player in `data/medstation/careers/<ckey>.json`, so it survives rounds. (`careers.dm`, `career_locks.dm`,
 `career_jobs.dm`)
