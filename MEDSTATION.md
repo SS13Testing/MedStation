@@ -188,7 +188,7 @@ Order matters: the core loop at the main hospital comes first.
 **3. Medical depth (from research on Baystation12, ColonialMarines, Goonstation)**
 Reimplement from the ideas, don't copy Goonstation code (its licence is non-commercial share-alike).
 1. Chemical-effect flags (painkiller, stabiliser, antibiotic...) and staged overdoses with side effects.
-2. (Done in a first form: see Pain and shock.) Next: per-limb pain, pulse and blood pressure readouts, shock-specific scans.
+2. (Done in a first form: see Pain and shock, with pulse and blood pressure on health scans.) Next: per-limb pain, ECG and monitor machines.
 3. Pulse and circulation (hypovolemia, arterial bleeding, arrest, CPR).
 4. Richer per-limb scans (triage tags are done).
 5. An ailment layer with explicit cure flags and "suggested remedy" on scans.

@@ -13,9 +13,38 @@
 
 /datum/component/shock/RegisterWithParent()
 	RegisterSignal(parent, COMSIG_ATOM_EXAMINE, PROC_REF(on_examine))
+	RegisterSignal(parent, COMSIG_LIVING_HEALTHSCAN, PROC_REF(on_healthscan))
 
 /datum/component/shock/UnregisterFromParent()
-	UnregisterSignal(parent, COMSIG_ATOM_EXAMINE)
+	UnregisterSignal(parent, list(COMSIG_ATOM_EXAMINE, COMSIG_LIVING_HEALTHSCAN))
+
+/// Heart rate in beats per minute: climbs with injury and shock, zero when dead.
+/datum/component/shock/proc/get_pulse(mob/living/carbon/human/patient)
+	if(patient.stat == DEAD)
+		return 0
+	return round(clamp(70 + 60 * get_load(patient) + 0.5 * level, 40, 190))
+
+/// Blood pressure as "systolic/diastolic": drops with blood loss and shock.
+/datum/component/shock/proc/get_blood_pressure(mob/living/carbon/human/patient)
+	if(patient.stat == DEAD)
+		return "0/0"
+	var/systolic = round(clamp(120 * patient.blood_volume / BLOOD_VOLUME_NORMAL - 0.4 * level, 20, 140))
+	return "[systolic]/[round(systolic * 0.65)]"
+
+/// Health analyzers show vitals; the advanced one also names the shock stage.
+/datum/component/shock/proc/on_healthscan(mob/living/source, list/render_list, advanced, mob/user, mode, tochat)
+	SIGNAL_HANDLER
+	var/mob/living/carbon/human/patient = parent
+	var/stage = "stable"
+	if(level >= SHOCK_COLLAPSE)
+		stage = "DEEP SHOCK"
+	else if(level >= SHOCK_PALE)
+		stage = "early shock"
+	var/style = level >= SHOCK_PALE ? "alert" : "info"
+	var/line = "Pulse: [get_pulse(patient)] bpm, blood pressure [get_blood_pressure(patient)]."
+	if(advanced)
+		line += " Circulation: [stage] ([round(level)]%)."
+	render_list += "<span class='[style] ml-1'>[line]</span><br>"
 
 /datum/component/shock/proc/on_examine(atom/source, mob/user, list/examine_list)
 	SIGNAL_HANDLER

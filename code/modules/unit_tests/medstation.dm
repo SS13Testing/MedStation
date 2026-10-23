@@ -986,6 +986,16 @@
 	TEST_ASSERT(shock.level >= SHOCK_COLLAPSE, "a badly hurt patient should be in deep shock (level [shock.level])")
 	TEST_ASSERT(patient.IsUnconscious(), "deep shock should knock the patient out")
 	TEST_ASSERT(patient.getOxyLoss() > 0, "deep shock should start to suffocate the patient")
+	// the scanner shows vitals that reflect it
+	var/list/scan = list()
+	SEND_SIGNAL(patient, COMSIG_LIVING_HEALTHSCAN, scan, TRUE, null, 1, FALSE) // 1 is the verbose scan mode
+	var/scan_text = scan.Join()
+	TEST_ASSERT(findtext(scan_text, "DEEP SHOCK") && findtext(scan_text, "bpm"), "the advanced scan should show pulse and shock stage (got [scan_text])")
+	TEST_ASSERT(shock.get_pulse(patient) > 100, "a patient in shock should have a racing pulse ([shock.get_pulse(patient)])")
+	TEST_ASSERT(patient.blood_volume / BLOOD_VOLUME_NORMAL * 120 - 0.4 * shock.level < 90, "blood pressure should have dropped")
+	scan.Cut()
+	SEND_SIGNAL(patient, COMSIG_LIVING_HEALTHSCAN, scan, FALSE, null, 1, FALSE) // 1 is the verbose scan mode
+	TEST_ASSERT(!findtext(scan.Join(), "Circulation"), "the basic scanner shouldn't name the shock stage")
 	// they are not discharged while in shock
 	TEST_ASSERT(isnull(record.discharge_at), "a patient in shock must not be discharged")
 	// stasis freezes the level
