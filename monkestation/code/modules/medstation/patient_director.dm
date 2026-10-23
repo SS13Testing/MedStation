@@ -702,7 +702,9 @@ SUBSYSTEM_DEF(patient_director)
 		react(patient, SSpatient_director)
 	if(is_contaminated(patient))
 		patient.adjustToxLoss(1) // the residue keeps hurting them until it is washed off
-	if(case.is_resolved(patient) && !is_contaminated(patient) && !(locate(/datum/disease/anaphylaxis) in patient.diseases))
+	var/datum/component/shock/shock = patient.LoadComponent(/datum/component/shock)
+	shock.tick_shock(patient)
+	if(case.is_resolved(patient) && !is_contaminated(patient) && shock.level < SHOCK_STABLE && !(locate(/datum/disease/anaphylaxis) in patient.diseases))
 		discharge_at = world.time + PATIENT_DISCHARGE_DELAY
 		patient.SetUnconscious(0)
 		to_chat(patient, span_notice("You feel much better."))

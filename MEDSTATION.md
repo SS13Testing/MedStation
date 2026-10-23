@@ -46,6 +46,10 @@ Glue between calls and scenes: `field_calls.dm`.
 they can't be discharged until a shower has washed them. There are showers in the ambulance bay, the isolation lab and the
 staff lockers; toilets and sinks are in the waiting room, ER and lockers. (`decontamination.dm`)
 
+**Pain and shock.** Badly hurt (half their health in brute/burn) or bleeding patients build up shock each director tick: pale and
+clammy at 35, collapsed and suffocating at 70. Lying them down and painkillers halve the climb; saline and epinephrine drain it;
+stasis freezes it. A patient still in shock (20+) is not discharged. (`shock.dm`)
+
 **Careers.** Everyone starts as a Nurse or Basic EMT (always open, and the overflow role). Helping to treat patients earns
 career XP, kept per player in `data/medstation/careers/<ckey>.json`, so it survives rounds. (`careers.dm`, `career_locks.dm`,
 `career_jobs.dm`)
@@ -184,7 +188,7 @@ Order matters: the core loop at the main hospital comes first.
 **3. Medical depth (from research on Baystation12, ColonialMarines, Goonstation)**
 Reimplement from the ideas, don't copy Goonstation code (its licence is non-commercial share-alike).
 1. Chemical-effect flags (painkiller, stabiliser, antibiotic...) and staged overdoses with side effects.
-2. Pain and shock stages, so untreated injuries visibly collapse a patient.
+2. (Done in a first form: see Pain and shock.) Next: per-limb pain, pulse and blood pressure readouts, shock-specific scans.
 3. Pulse and circulation (hypovolemia, arterial bleeding, arrest, CPR).
 4. Richer per-limb scans (triage tags are done).
 5. An ailment layer with explicit cure flags and "suggested remedy" on scans.

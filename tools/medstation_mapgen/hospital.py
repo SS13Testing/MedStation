@@ -301,6 +301,10 @@ def furnish(g):
 	g.put(x2, y1 + 3, "/obj/structure/closet/crate/medical")
 	g.put(x1 + 6, y1 + 5, "/obj/machinery/rnd/production/techfab/department/medical")
 	g.put(x1 + 1, y1 + 5, "/obj/structure/sink")
+	g.put(x1 + 4, y1 + 1, "/obj/machinery/vending/wardrobe/chem_wardrobe")
+	g.put(x1 + 5, y1 + 1, "/obj/structure/filingcabinet/medical")
+	g.put(x1 + 10, y2 - 2, "/obj/item/storage/box/pillbottles")
+	g.put(x1 + 8, y1 + 1, "/obj/structure/closet/crate/freezer")
 	# supply shelves along the west wall: dressings for the first busy hours (the vending machines hold few)
 	for i, items in enumerate((
 		("/obj/item/stack/medical/gauze", "/obj/item/stack/medical/gauze"),
@@ -418,6 +422,11 @@ def furnish(g):
 		g.put(x2, y, "/obj/structure/closet/secure_closet/medical1")
 	cubicle(g, "locker", x2, y2, -1, -1, 8)       # north-east corner
 	cubicle(g, "locker", x2, y1, -1, 1, 8)        # south-east corner
+	g.put(x1 + 3, y1, "/obj/machinery/vending/wardrobe/medi_wardrobe")
+	g.put(x1 + 4, y1, "/obj/machinery/vending/wardrobe/medi_wardrobe")
+	g.put(x1 + 3, y1 + 6, "/obj/structure/chair/sofa/bench/solo")
+	g.put(x1 + 4, y1 + 6, "/obj/structure/chair/sofa/bench/solo")
+	g.put(x1 + 5, y1 + 6, "/obj/structure/closet/crate/freezer")
 	g.put(x1, y2, "/obj/structure/sink")
 	g.put(x1 + 1, y2, "/obj/machinery/shower/directional/north")
 	g.put(x1 + 2, y2, "/obj/machinery/washing_machine")

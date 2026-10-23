@@ -22,3 +22,10 @@
 #define JOB_DISPLAY_ORDER_NURSE 24.5
 #define JOB_DISPLAY_ORDER_BASIC_EMT 25.5
 #define JOB_UNAVAILABLE_CAREER 8
+
+// Pain and shock (see shock.dm)
+#define SHOCK_PALE 35
+#define SHOCK_COLLAPSE 70
+#define SHOCK_MAX 100
+/// Shock level below which a patient counts as stable (needed for discharge)
+#define SHOCK_STABLE 20

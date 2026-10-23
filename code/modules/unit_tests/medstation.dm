@@ -963,6 +963,57 @@
 	for(var/title in GLOB.career_job_ranks)
 		TEST_ASSERT_NOTNULL(SSjob.GetJob(title), "the career ladder lists [title] which isn't a job")
 
+/// Pain and shock: serious injuries and blood loss push a patient into shock; the right care pulls them back.
+/datum/unit_test/medstation_shock
+
+/datum/unit_test/medstation_shock/Run()
+	var/datum/controller/subsystem/patient_director/director = SSpatient_director
+	director.active.Cut()
+	var/datum/patient_record/record = director.spawn_patient(/datum/patient_case/flu, run_loc_floor_bottom_left, 1)
+	var/mob/living/carbon/human/patient = record.patient_ref.resolve()
+	patient.reagents.clear_reagents()
+	// a mild patient never goes into shock
+	for(var/i in 1 to 20)
+		record.process_record(director)
+	TEST_ASSERT(get_shock_level(patient) < SHOCK_PALE, "a flu patient should not be in shock (level [get_shock_level(patient)])")
+	// badly hurt and standing: shock builds, then they collapse
+	patient.adjustBruteLoss(80, forced = TRUE)
+	patient.updatehealth()
+	var/datum/component/shock/shock = patient.GetComponent(/datum/component/shock)
+	TEST_ASSERT_NOTNULL(shock, "the director should have given the patient a shock component")
+	for(var/i in 1 to 30)
+		shock.tick_shock(patient)
+	TEST_ASSERT(shock.level >= SHOCK_COLLAPSE, "a badly hurt patient should be in deep shock (level [shock.level])")
+	TEST_ASSERT(patient.IsUnconscious(), "deep shock should knock the patient out")
+	TEST_ASSERT(patient.getOxyLoss() > 0, "deep shock should start to suffocate the patient")
+	// they are not discharged while in shock
+	TEST_ASSERT(isnull(record.discharge_at), "a patient in shock must not be discharged")
+	// stasis freezes the level
+	var/frozen = shock.level
+	ADD_TRAIT(patient, TRAIT_STASIS, TRAIT_GENERIC)
+	shock.tick_shock(patient)
+	TEST_ASSERT_EQUAL(shock.level, frozen, "stasis should freeze shock")
+	REMOVE_TRAIT(patient, TRAIT_STASIS, TRAIT_GENERIC)
+	// a painkiller slows the climb compared with no treatment
+	shock.level = 0
+	shock.tick_shock(patient)
+	var/untreated_rise = shock.level
+	shock.level = 0
+	patient.reagents.add_reagent(/datum/reagent/medicine/painkiller/morphine, 5)
+	shock.tick_shock(patient)
+	TEST_ASSERT(shock.level < untreated_rise, "a painkiller should slow shock ([shock.level] vs [untreated_rise])")
+	patient.reagents.clear_reagents()
+	// healed and given saline, shock drains away
+	patient.adjustBruteLoss(-patient.getBruteLoss(), forced = TRUE)
+	patient.adjustOxyLoss(-patient.getOxyLoss(), forced = TRUE)
+	patient.updatehealth()
+	shock.level = 90
+	patient.reagents.add_reagent(/datum/reagent/medicine/salglu_solution, 5)
+	for(var/i in 1 to 15)
+		shock.tick_shock(patient)
+	TEST_ASSERT(shock.level < SHOCK_STABLE, "a healed patient on saline should recover from shock (level [shock.level])")
+	director.active.Cut()
+
 /// Every MedStation test has to be registered with TEST_FOCUS, or it silently never runs.
 /datum/unit_test/medstation_tests_are_focused
 
@@ -979,6 +1030,7 @@ TEST_FOCUS(/datum/unit_test/medstation_ambulance)
 TEST_FOCUS(/datum/unit_test/medstation_flows)
 TEST_FOCUS(/datum/unit_test/medstation_field)
 TEST_FOCUS(/datum/unit_test/medstation_decon)
+TEST_FOCUS(/datum/unit_test/medstation_shock)
 TEST_FOCUS(/datum/unit_test/medstation_economy)
 TEST_FOCUS(/datum/unit_test/medstation_quarantine)
 TEST_FOCUS(/datum/unit_test/medstation_solo)

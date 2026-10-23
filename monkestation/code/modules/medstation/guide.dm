@@ -13,6 +13,7 @@
 		A correct tag earns a bonus when they are discharged.<br>\
 		<b>Money</b>: cured patients pay the medical budget. Spend it at a <b>hospital terminal</b> (triage, staff lounge) on tools, blood, drugs and spare organs. \
 		Orders arrive as a crate in the ambulance bay.<br>\
+		<b>Shock</b>: badly hurt or bleeding patients go pale, then collapse. Lie them down, give painkillers or saline, and get them on a stasis bed.<br>\
 		<b>Rating</b>: cures raise the hospital's reputation, deaths lower it faster. A better hospital gets a bigger caseload and rarer, harder patients.<br><br>\
 		<b>Careers</b>: everyone starts as a Nurse or Basic EMT. Helping to treat patients earns career XP, saved between rounds, and \
 		ranks unlock better jobs (Doctor, Paramedic, Chemist...) and the tools and medicines that go with them. See the <b>Career</b> verb.<br><br>\
