@@ -42,6 +42,11 @@ def main():
 	m.add(2, 6, "/obj/item/storage/medkit/regular")
 	m.add(4, 6, "/obj/item/healthanalyzer")
 	m.add(2, 2, "/obj/structure/bed/medical/emergency")
+	# rescue gear for the field scenes' hazards: masks for fumes and smoke, hard hats for falling debris
+	for thing in ("/obj/structure/closet/emcloset", "/obj/item/clothing/mask/gas", "/obj/item/clothing/mask/gas", "/obj/item/clothing/mask/gas",
+			"/obj/item/clothing/head/utility/hardhat", "/obj/item/clothing/head/utility/hardhat", "/obj/item/clothing/head/utility/hardhat",
+			"/obj/item/extinguisher", "/obj/item/crowbar"):
+		m.add(2, 5, thing)
 	m.save(DST)
 	print("wrote", DST)
 

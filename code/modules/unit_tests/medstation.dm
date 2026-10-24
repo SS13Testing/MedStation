@@ -1071,6 +1071,43 @@
 	patient.set_body_position(STANDING_UP)
 	TEST_ASSERT(findtext(monitor.get_readout(), "No patients"), "standing people are not monitored")
 
+/// Scene hazards hurt unprotected people at the scene, and the ambulance's gear protects against them.
+/datum/unit_test/medstation_hazards
+
+/datum/unit_test/medstation_hazards/Run()
+	var/list/expected = list(/datum/medstation_scene/hydroponics = /datum/scene_hazard/fumes, /datum/medstation_scene/fire = /datum/scene_hazard/smoke,
+		/datum/medstation_scene/cargo = /datum/scene_hazard/collapse)
+	for(var/scene_type in expected)
+		var/datum/medstation_scene/definition = new scene_type()
+		TEST_ASSERT_EQUAL(definition.hazard_type, expected[scene_type], "[scene_type] has the wrong hazard")
+	// the ambulance carries the gear
+	var/gear_text = file2text("_maps/shuttles/ambulance_medstation.dmm")
+	TEST_ASSERT(findtext(gear_text, "/obj/item/clothing/mask/gas") && findtext(gear_text, "/obj/item/clothing/head/utility/hardhat"), "the ambulance map should hold gas masks and hard hats")
+
+	var/datum/field_scene/scene = new(new /datum/medstation_scene/hydroponics())
+	TEST_ASSERT(scene.load(1), "couldn't load the hydroponics scene")
+	TEST_ASSERT_NOTNULL(scene.hazard, "the scene should have a hazard")
+	var/turf/spot = scene.patient_spots[1]
+	var/mob/living/carbon/human/bare = allocate(/mob/living/carbon/human/consistent, spot)
+	var/mob/living/carbon/human/masked = allocate(/mob/living/carbon/human/consistent, scene.patient_spots[2])
+	var/obj/item/clothing/mask/gas/mask = allocate(/obj/item/clothing/mask/gas)
+	masked.equip_to_slot_if_possible(mask, ITEM_SLOT_MASK)
+	TEST_ASSERT(has_filtered_air(masked) && !has_filtered_air(bare), "only the masked person has filtered air")
+	scene.hazard.pulse(scene)
+	TEST_ASSERT(bare.getToxLoss() > 0, "fumes should poison an unmasked person")
+	TEST_ASSERT_EQUAL(masked.getToxLoss(), 0, "a gas mask should protect from fumes")
+
+	// debris: a hard hat takes most of it
+	var/datum/scene_hazard/collapse/collapse = new()
+	var/mob/living/carbon/human/hatted = allocate(/mob/living/carbon/human/consistent, scene.patient_spots[3])
+	var/obj/item/clothing/head/utility/hardhat/hat = allocate(/obj/item/clothing/head/utility/hardhat)
+	hatted.equip_to_slot_if_possible(hat, ITEM_SLOT_HEAD)
+	collapse.drop(get_turf(bare))
+	collapse.drop(get_turf(hatted))
+	TEST_ASSERT(bare.getBruteLoss() >= collapse.bare_damage - 1, "debris should hurt a bare-headed person ([bare.getBruteLoss()])")
+	TEST_ASSERT(hatted.getBruteLoss() < bare.getBruteLoss(), "a hard hat should reduce debris damage ([hatted.getBruteLoss()] vs [bare.getBruteLoss()])")
+	qdel(scene)
+
 /// Every MedStation test has to be registered with TEST_FOCUS, or it silently never runs.
 /datum/unit_test/medstation_tests_are_focused
 
@@ -1088,6 +1125,7 @@ TEST_FOCUS(/datum/unit_test/medstation_flows)
 TEST_FOCUS(/datum/unit_test/medstation_field)
 TEST_FOCUS(/datum/unit_test/medstation_decon)
 TEST_FOCUS(/datum/unit_test/medstation_shock)
+TEST_FOCUS(/datum/unit_test/medstation_hazards)
 TEST_FOCUS(/datum/unit_test/medstation_vitals_monitor)
 TEST_FOCUS(/datum/unit_test/medstation_infection)
 TEST_FOCUS(/datum/unit_test/medstation_economy)

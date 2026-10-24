@@ -12,6 +12,15 @@
 /turf/open/floor/mineral/titanium/blue,
 /area/shuttle/ambulance)
 "ad" = (
+/obj/structure/closet/emcloset,
+/obj/item/clothing/mask/gas,
+/obj/item/clothing/mask/gas,
+/obj/item/clothing/mask/gas,
+/obj/item/clothing/head/utility/hardhat,
+/obj/item/clothing/head/utility/hardhat,
+/obj/item/clothing/head/utility/hardhat,
+/obj/item/extinguisher,
+/obj/item/crowbar,
 /turf/open/floor/mineral/titanium,
 /area/shuttle/ambulance)
 "ae" = (
@@ -40,6 +49,9 @@
 /turf/open/floor/mineral/titanium,
 /area/shuttle/ambulance)
 "aj" = (
+/turf/open/floor/mineral/titanium,
+/area/shuttle/ambulance)
+"ak" = (
 /obj/machinery/power/shuttle_engine/heater,
 /obj/structure/window/reinforced/spawner/directional/north{
 	layer = 2.9
@@ -48,20 +60,20 @@
 /obj/structure/window/reinforced/spawner/directional/east,
 /turf/open/floor/plating,
 /area/shuttle/ambulance)
-"ak" = (
+"al" = (
 /obj/machinery/power/shuttle_engine/propulsion/burst,
 /turf/open/floor/plating/airless,
 /area/shuttle/ambulance)
-"al" = (
+"am" = (
 /obj/structure/table,
 /obj/item/healthanalyzer,
 /turf/open/floor/mineral/titanium/blue,
 /area/shuttle/ambulance)
-"am" = (
+"an" = (
 /obj/structure/bed/medical/emergency,
 /turf/open/floor/mineral/titanium/blue,
 /area/shuttle/ambulance)
-"an" = (
+"ao" = (
 /obj/machinery/door/airlock/titanium{
 	name = "Ambulance Rear Doors"
 	},
@@ -99,25 +111,25 @@ aa
 ab
 ah
 ai
-ad
-af
 aj
+af
 ak
+al
 "}
 (4,1,1) = {"
 aa
-al
-ad
-ad
-af
 am
+aj
+aj
+af
+an
 aa
 "}
 (5,1,1) = {"
 aa
 aa
 ab
-an
+ao
 ab
 aa
 aa

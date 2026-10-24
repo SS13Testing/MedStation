@@ -186,8 +186,9 @@ Order matters: the core loop at the main hospital comes first.
   Machines that need pipes or plumbing (cryo tubes, showers) are left out of the hospital because it has none.
 
 **2. Field response**
-- **Scene hazards**: spreading fire, gas leaks, live wires, collapses and unstable structures that threaten the crew as well
-  as the patients, with matching gear in the ambulance (firesuit, internals, a crowbar). Themed per scene.
+- **Scene hazards** (first form done, `scene_hazards.dm`): fumes (hydroponics) and smoke (fire) hurt anyone without a gas mask,
+  collapses (maintenance, cargo, observation) drop debris after a warning creak, softened by hard hats; the ambulance has a rescue
+  locker with masks, hard hats, an extinguisher and a crowbar. Still to do: spreading fire, live wires, firesuits, per-variant hazards.
 - A drivable ambulance (manual driving instead of the console), and use the crimson-grid ambulance sprite for it.
 - More scene themes (ice/outdoor, space-side, hostile wildlife) and bystanders.
 

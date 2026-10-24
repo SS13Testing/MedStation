@@ -50,6 +50,8 @@
 		return FALSE
 	scene.urgency = emergency.urgency()
 	active_scene = scene
+	if(scene.hazard)
+		dispatch("Hazard at [scene.template.location_text]: [scene.hazard.warning]")
 	var/staff = max(1, count_staff())
 	var/list/spots = scene.patient_spots.Copy()
 	for(var/case_type in emergency.case_types)
@@ -69,6 +71,7 @@
 	if(ambulance_away_from_home())
 		scene.departed = TRUE
 		scene.returned_at = null
+		scene.hazard?.tick_hazard(scene)
 		return
 	if(scene.departed)
 		scene.returned_at ||= world.time

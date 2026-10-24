@@ -57,34 +57,41 @@
 	var/list/cases = list()
 	var/min_patients = 1
 	var/max_patients = 3
+	/// Environmental hazard at this scene (a /datum/scene_hazard type), if any
+	var/hazard_type
 
 /datum/medstation_scene/maintenance
 	name = "Maintenance collapse"
 	map_file = "maintenance"
+	hazard_type = /datum/scene_hazard/collapse
 	location_text = "a collapsed maintenance corridor"
 	cases = list(/datum/patient_case/blunt_trauma = 10, /datum/patient_case/laceration = 8, /datum/patient_case/head_injury = 4, /datum/patient_case/shrapnel = 5)
 
 /datum/medstation_scene/cargo
 	name = "Cargo bay accident"
 	map_file = "cargo"
+	hazard_type = /datum/scene_hazard/collapse
 	location_text = "the cargo bay, where a stack of crates came down"
 	cases = list(/datum/patient_case/blunt_trauma = 12, /datum/patient_case/laceration = 6, /datum/patient_case/head_injury = 6, /datum/patient_case/shrapnel = 3)
 
 /datum/medstation_scene/hydroponics
 	name = "Hydroponics deck"
 	map_file = "hydroponics"
+	hazard_type = /datum/scene_hazard/fumes
 	location_text = "the hydroponics deck, where a chemical spill sent people to the floor"
 	cases = list(/datum/patient_case/poisoning = 12, /datum/patient_case/respiratory = 8, /datum/patient_case/eye_injury = 6, /datum/patient_case/appendicitis = 4)
 
 /datum/medstation_scene/observation
 	name = "Observation lounge"
 	map_file = "observation"
+	hazard_type = /datum/scene_hazard/collapse
 	location_text = "the observation lounge, where a window failed"
 	cases = list(/datum/patient_case/shrapnel = 10, /datum/patient_case/laceration = 8, /datum/patient_case/respiratory = 6, /datum/patient_case/blunt_trauma = 6)
 
 /datum/medstation_scene/fire
 	name = "Compartment fire"
 	map_file = "fire"
+	hazard_type = /datum/scene_hazard/smoke
 	location_text = "a compartment that has just been through a fire"
 	min_level = 2
 	cases = list(/datum/patient_case/burns = 14, /datum/patient_case/respiratory = 10, /datum/patient_case/heart_attack = 2)
@@ -103,13 +110,17 @@
 	var/departed = FALSE
 	/// Since when the ambulance has been back at the hospital
 	var/returned_at
+	var/datum/scene_hazard/hazard
 
 /datum/field_scene/New(datum/medstation_scene/template)
 	src.template = template
 	created_at = world.time
+	if(template.hazard_type)
+		hazard = new template.hazard_type()
 
 /datum/field_scene/Destroy(force)
 	unload()
+	hazard = null
 	template = null
 	return ..()
 
