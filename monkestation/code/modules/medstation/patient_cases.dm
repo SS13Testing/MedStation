@@ -204,6 +204,30 @@
 		return FALSE
 	return !patient.reagents.has_reagent(/datum/reagent/toxin/formaldehyde)
 
+/datum/patient_case/radiation
+	name = "Nausea after a lab accident"
+	diagnosis = "Radiation exposure from a leaking sample"
+	treatment = "Wash them in a shower first (they are covered in residue and it keeps hurting them). Scan them, then give pen-acid to purge the contamination and heal the toxin damage."
+	required_rank = 1
+	contaminated = TRUE
+	needs = list(list(/datum/reagent/medicine/pen_acid), list(/obj/machinery/shower))
+	difficulty = 2
+	weight = 8
+	symptoms = list("I feel awful, my skin is burning.", "I keep throwing up.", "There was a sample that started to glow...")
+	history = list("Was working near a leaking sample container.", "Nauseous, hair loss, skin irritation.")
+
+/datum/patient_case/radiation/apply(mob/living/carbon/human/patient)
+	patient.reagents.add_reagent(/datum/reagent/uranium, 10)
+	patient.adjustToxLoss(30)
+
+/datum/patient_case/radiation/worsen(mob/living/carbon/human/patient)
+	patient.adjustToxLoss(4)
+
+/datum/patient_case/radiation/is_resolved(mob/living/carbon/human/patient)
+	if(!is_generally_stable(patient, tox_max = 10))
+		return FALSE
+	return !patient.reagents.has_reagent(/datum/reagent/uranium)
+
 /datum/patient_case/liver_failure
 	min_level = 4
 	name = "Yellowing skin, confusion"

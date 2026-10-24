@@ -500,7 +500,7 @@
 	var/datum/patient_record/clean = director.spawn_patient(/datum/patient_case/burns, run_loc_floor_bottom_left, 1)
 	TEST_ASSERT(!is_contaminated(clean.patient_ref.resolve()), "a burns patient is not contaminated")
 	// the chemical cases all need a shower, and the hospital has them
-	for(var/case_type in list(/datum/patient_case/poisoning, /datum/patient_case/respiratory, /datum/patient_case/eye_injury))
+	for(var/case_type in list(/datum/patient_case/poisoning, /datum/patient_case/respiratory, /datum/patient_case/eye_injury, /datum/patient_case/radiation))
 		var/datum/patient_case/case = new case_type()
 		TEST_ASSERT(case.contaminated, "[case_type] should be a contaminated case")
 		TEST_ASSERT(findtext(case.treatment, "shower"), "[case_type]'s treatment hint should mention the shower")
