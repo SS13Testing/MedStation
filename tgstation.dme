@@ -7935,6 +7935,7 @@
 #include "monkestation\code\modules\medstation\infection.dm"
 #include "monkestation\code\modules\medstation\vitals_monitor.dm"
 #include "monkestation\code\modules\medstation\scene_hazards.dm"
+#include "monkestation\code\modules\medstation\hospital_persistence.dm"
 #include "monkestation\code\modules\medstation\field_response.dm"
 #include "monkestation\code\modules\medstation\field_scenes.dm"
 #include "monkestation\code\modules\medstation\areas.dm"

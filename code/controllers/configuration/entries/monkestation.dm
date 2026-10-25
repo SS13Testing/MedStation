@@ -115,3 +115,10 @@
 	integer = TRUE
 	min_val = 0
 	max_val = 1
+
+/// MedStation: 1 = the hospital's reputation, level and case library are kept from round to round (data/medstation/hospital.json)
+/datum/config_entry/number/medstation_persist_hospital
+	default = 1
+	integer = TRUE
+	min_val = 0
+	max_val = 1

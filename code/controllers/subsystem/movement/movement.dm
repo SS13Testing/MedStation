@@ -107,6 +107,9 @@ SUBSYSTEM_DEF(movement)
 
 /datum/controller/subsystem/movement/proc/dequeue_loop(datum/move_loop/loop)
 	var/list/our_entries = buckets["[loop.timer]"]
+	// MEDSTATION EDIT: a drifting thing can finish inside pour_bucket after its bucket was already smashed; nothing to remove then
+	if(!our_entries)
+		return
 	our_entries -= loop
 	if(!length(our_entries))
 		smash_bucket(bucket_time = loop.timer) // We can't pass an index in for context because we don't know our position

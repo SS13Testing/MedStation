@@ -1108,6 +1108,58 @@
 	TEST_ASSERT(hatted.getBruteLoss() < bare.getBruteLoss(), "a hard hat should reduce debris damage ([hatted.getBruteLoss()] vs [bare.getBruteLoss()])")
 	qdel(scene)
 
+/// The hospital's progress is saved to a file and loaded back.
+/datum/unit_test/medstation_persistence
+
+/datum/unit_test/medstation_persistence/Run()
+	var/datum/controller/subsystem/patient_director/director = SSpatient_director
+	TEST_ASSERT(!director.persist_hospital, "unit tests must not touch the real hospital save")
+	var/old_path = director.hospital_save_path
+	var/old_reputation = director.reputation
+	var/old_training = director.training_done
+	var/old_discovered = director.discovered.Copy()
+	var/old_treated = director.treated
+	director.hospital_save_path = "data/medstation/test_hospital.json"
+	fdel(director.hospital_save_path)
+	director.persist_hospital = TRUE
+	TEST_ASSERT(!director.load_hospital(), "there is nothing to load before a save")
+	director.reputation = 77
+	director.training_done = TRUE
+	director.treated = 5
+	director.discovered = list(/datum/patient_case/flu = TRUE, /datum/patient_case/burns = TRUE)
+	TEST_ASSERT(director.save_hospital(), "saving should work")
+	TEST_ASSERT(fexists(director.hospital_save_path), "the save file wasn't written")
+	// a new round
+	director.reputation = 0
+	director.training_done = FALSE
+	director.treated = 0
+	director.discovered = list()
+	director.lifetime_treated = 0
+	TEST_ASSERT(director.load_hospital(), "the save should load")
+	TEST_ASSERT_EQUAL(director.reputation, 77, "reputation should come back")
+	TEST_ASSERT(director.training_done, "the training period shouldn't restart")
+	TEST_ASSERT_EQUAL(director.lifetime_treated, 5, "lifetime totals should come back")
+	TEST_ASSERT(director.discovered[/datum/patient_case/flu] && director.discovered[/datum/patient_case/burns], "the case library should come back")
+	TEST_ASSERT(director.loaded_from_save, "the director should know it loaded a save")
+	// a garbage save is ignored
+	rustg_file_write("not json at all", director.hospital_save_path)
+	director.reputation = 3
+	TEST_ASSERT(!director.load_hospital(), "a corrupt save should be ignored")
+	TEST_ASSERT_EQUAL(director.reputation, 3, "a corrupt save must not change anything")
+	// the switch in the config turns it off
+	fdel(director.hospital_save_path)
+	director.persist_hospital = FALSE
+	TEST_ASSERT(!director.save_hospital(), "saving does nothing when persistence is off")
+	TEST_ASSERT(!fexists(director.hospital_save_path), "no file should be written when persistence is off")
+	director.hospital_save_path = old_path
+	director.reputation = old_reputation
+	director.training_done = old_training
+	director.discovered = old_discovered
+	director.treated = old_treated
+	director.lifetime_treated = 0
+	director.loaded_from_save = FALSE
+	director.update_level()
+
 /// Every MedStation test has to be registered with TEST_FOCUS, or it silently never runs.
 /datum/unit_test/medstation_tests_are_focused
 
@@ -1125,6 +1177,7 @@ TEST_FOCUS(/datum/unit_test/medstation_flows)
 TEST_FOCUS(/datum/unit_test/medstation_field)
 TEST_FOCUS(/datum/unit_test/medstation_decon)
 TEST_FOCUS(/datum/unit_test/medstation_shock)
+TEST_FOCUS(/datum/unit_test/medstation_persistence)
 TEST_FOCUS(/datum/unit_test/medstation_hazards)
 TEST_FOCUS(/datum/unit_test/medstation_vitals_monitor)
 TEST_FOCUS(/datum/unit_test/medstation_infection)

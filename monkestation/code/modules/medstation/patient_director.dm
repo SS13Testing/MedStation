@@ -140,6 +140,8 @@ SUBSYSTEM_DEF(patient_director)
 	if(isnull(next_patient_time))
 		next_patient_time = world.time + PATIENT_FIRST_DELAY
 		SSeconomy.get_dep_account(ACCOUNT_MED)?.adjust_money(HOSPITAL_STARTING_FUNDS, "Hospital opening grant")
+		if(load_hospital())
+			dispatch("The hospital's records are loaded: [level_name()], reputation [reputation].")
 	for(var/datum/patient_record/record as anything in active.Copy())
 		record.process_record(src)
 	expire_calls()
@@ -541,6 +543,7 @@ SUBSYSTEM_DEF(patient_director)
 			reputation -= case.difficulty
 			dispatch("[record.patient_name] got tired of waiting and left without being seen. Reputation falls.")
 	update_level()
+	save_hospital()
 
 /// The case library: every kind of case the staff have handled, with diagnosis and treatment.
 /datum/controller/subsystem/patient_director/proc/get_library_text()
